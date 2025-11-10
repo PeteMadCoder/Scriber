@@ -1,0 +1,8 @@
+<!-- resources.qrc -->
+<RCC>
+    <qresource prefix="/">
+        <file>resources/themes/light.css</file>
+        <file>resources/themes/dark.css</file>
+        <file>resources/icons/appicon.png</file>
+    </qresource>
+</RCC>
