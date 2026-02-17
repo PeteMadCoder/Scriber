@@ -17,6 +17,7 @@ class QWidget;
 class QDockWidget;
 class QTreeView;
 class QFileSystemModel;
+class QTimer; // Forward declaration
 
 class MainWindow : public QMainWindow
 {
@@ -71,6 +72,8 @@ private:
     QTreeView *fileTreeView;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
+    
+    QTimer *wordCountTimer; // Debounce word count updates
 
     // Menu actions - Member objects
     QAction newAct;

@@ -27,6 +27,7 @@
 #include <QWidget>
 #include <QKeyEvent>
 #include <QStatusBar>
+#include <QTimer>
 #include <QDockWidget>
 #include <QTreeView>
 #include <QFileSystemModel>
@@ -346,10 +347,9 @@ void MainWindow::setCurrentFile(const QString &fileName)
     setWindowFilePath(shownName); // Sets the window title with the file path
     
     bool modified = editor->document()->isModified();
-    QString title = QString("%1%2%3 - %4").arg(
+    QString title = QString("%1%2 - %3").arg(
         modified ? "*" : "",
         shownName, 
-        modified ? "*" : "",
         QApplication::applicationName()
     );
     setWindowTitle(title);
@@ -387,18 +387,33 @@ void MainWindow::createStatusBar() {
     statusBar()->addPermanentWidget(wordCountLabel);
     statusBar()->addPermanentWidget(charCountLabel);
     
-    // Connect to editor's textChanged signal
-    connect(editor, &QPlainTextEdit::textChanged, 
-            this, &MainWindow::updateWordCount);
+    // Debounce word count updates (every 1s)
+    wordCountTimer = new QTimer(this);
+    wordCountTimer->setSingleShot(true);
+    wordCountTimer->setInterval(1000);
+    
+    connect(editor, &QPlainTextEdit::textChanged, wordCountTimer, qOverload<>(&QTimer::start));
+    connect(wordCountTimer, &QTimer::timeout, this, &MainWindow::updateWordCount);
+    
+    // Initial update
+    updateWordCount();
 }
 
 void MainWindow::updateWordCount() {
+    int charCount = editor->document()->characterCount() - 1; // Subtract 1 for implicit trailing newline
+    if (charCount < 0) charCount = 0;
+    
+    charCountLabel->setText(tr("Chars: %1").arg(charCount));
+
+    // Performance optimization: Skip word counting for very large files (> 500KB)
+    if (charCount > 500000) {
+        wordCountLabel->setText(tr("Words: ..."));
+        return;
+    }
+
     QString text = editor->toPlainText();
     int wordCount = text.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).size();
-    int charCount = text.length();
-    
     wordCountLabel->setText(tr("Words: %1").arg(wordCount));
-    charCountLabel->setText(tr("Chars: %1").arg(charCount));
 }
 
 void MainWindow::openFile(const QString &path)
@@ -675,10 +690,9 @@ void MainWindow::documentWasModified()
     if (currentFile.isEmpty()) shownName = "untitled.md";
     
     bool modified = editor->document()->isModified();
-    QString title = QString("%1%2%3 - %4").arg(
+    QString title = QString("%1%2 - %3").arg(
         modified ? "*" : "",
         shownName,
-        modified ? "*" : "",
         QApplication::applicationName()
     );
     setWindowTitle(title);

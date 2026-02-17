@@ -25,7 +25,7 @@
     - Consider using `KSyntaxHighlighting` or `cmark`'s AST for language detection.
 
 ## Performance
-- [ ] **Large File Optimization**:
+- [x] **Large File Optimization**:
     - Implement debouncing for syntax highlighting and spell checking to prevent UI lag on large documents.
     - Investigate `QPlainTextEdit` performance bottlenecks.
 
