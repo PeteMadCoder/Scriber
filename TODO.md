@@ -1,0 +1,41 @@
+# Project Roadmap & TODOs
+
+## Refactoring & Architecture
+- [ ] **Restructure Project Layout**: Move source code into `src/`, headers into `include/`, and resources into `resources/` (standard C++ structure). Ensure CMake build system is updated to reflect these changes.
+
+## Core Features & Fixes
+- [ ] **Fix Unsaved Changes Indicator**: 
+    - Add a `*` suffix to the window title/tab when the file has unsaved changes (dirty state).
+    - Remove the `*` immediately upon saving.
+    - Fix the "Save Changes?" popup logic: only show it if the file is truly "dirty" (unsaved modification).
+- [ ] **Pitch Black Theme**:
+    - Add a new theme with `#000000` background and off-white/grey text (high contrast, OLED friendly).
+- [ ] **Portuguese Localization**:
+    - Add Portuguese (pt-PT/pt-BR) to the spellchecker supported languages.
+    - (Optional) Translate UI strings if applicable.
+
+## Advanced Integration
+- [ ] **Integrate `cmark`**:
+    - Replace or augment the current Regex-based Markdown parsing with `cmark` (CommonMark) for better accuracy and performance.
+    - Use the AST for cleaner export to HTML/PDF.
+- [ ] **Sidebar File Explorer**:
+    - Implement a toggleable sidebar showing a file tree view of the current directory (similar to xed).
+- [ ] **Multi-language Code Block Highlighting**:
+    - Implement syntax highlighting for code blocks within Markdown files (e.g., Python, C++, Bash).
+    - Consider using `KSyntaxHighlighting` or `cmark`'s AST for language detection.
+
+## Performance
+- [ ] **Large File Optimization**:
+    - Implement debouncing for syntax highlighting and spell checking to prevent UI lag on large documents.
+    - Investigate `QPlainTextEdit` performance bottlenecks.
+
+## Under Consideration (Not Priority)
+*These features are complex and currently under review. Implementation is not guaranteed.*
+
+- [ ] **Inline Images**:
+    - **Concept**: Display actual images within the editor view instead of just Markdown syntax.
+    - **Hurdles**: `QPlainTextEdit` is optimized for text, not rich media. Switching to `QTextEdit` might sacrifice performance for large files. Custom rendering requires significant low-level work.
+    
+- [ ] **Mermaid Graphs**:
+    - **Concept**: Render Mermaid diagrams directly within the editor.
+    - **Hurdles**: Mermaid is a JavaScript library, requiring a web engine (Chromium) to render. Embedding a web view is resource-heavy and complex. Static image generation (via Node.js) is feasible but not interactive.
