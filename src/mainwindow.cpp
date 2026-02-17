@@ -348,6 +348,18 @@ void MainWindow::setCurrentFile(const QString &fileName)
 }
 
 void MainWindow::createStatusBar() {
+    // Sidebar toggle button
+    QPushButton *sidebarToggleBtn = new QPushButton(tr("Sidebar"), this);
+    sidebarToggleBtn->setCheckable(true);
+    sidebarToggleBtn->setFlat(true);
+    // Initial state
+    if (sidebarDock) {
+        sidebarToggleBtn->setChecked(sidebarDock->isVisible());
+        connect(sidebarToggleBtn, &QPushButton::clicked, toggleSidebarAct, &QAction::trigger);
+        connect(toggleSidebarAct, &QAction::toggled, sidebarToggleBtn, &QPushButton::setChecked);
+    }
+    statusBar()->addWidget(sidebarToggleBtn);
+
     wordCountLabel = new QLabel(tr("Words: 0"));
     charCountLabel = new QLabel(tr("Chars: 0"));
     
