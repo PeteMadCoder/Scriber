@@ -31,7 +31,7 @@
     - Investigate `QPlainTextEdit` performance bottlenecks.
 
 ## UI/UX Enhancements (Planned)
-- [ ] **Multiple File Support (Tabs)**:
+- [x] **Multiple File Support (Tabs)**:
     - Implement a tabbed interface (using `QTabWidget`) to allow opening and editing multiple files simultaneously.
 - [ ] **Enhanced Sidebar Navigation**:
     - Improve sidebar to mimic xed's file browser.

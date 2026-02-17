@@ -58,17 +58,13 @@ MainWindow::MainWindow(QWidget *parent)
     createStatusBar();
     loadSettings();
 
-    // Connect tab signals
-    connect(tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
-    connect(tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
-
     // Initialize timers
     outlineTimer = new QTimer(this);
     outlineTimer->setSingleShot(true);
     outlineTimer->setInterval(1000);
     connect(outlineTimer, &QTimer::timeout, this, &MainWindow::updateOutline);
 
-    // Create initial empty tab (block signals to avoid premature onTabChanged)
+    // Create initial empty tab
     newFile();
 
     // Now connect tab signals (after initial tab is created)
@@ -340,22 +336,36 @@ void MainWindow::closeTab(int index)
         }
     }
 
-    // Remove the tab from the list first
+    // Block signals to prevent recursive tabCloseRequested emissions
+    tabWidget->blockSignals(true);
+    
+    // Get the widget BEFORE removing from lists
+    QWidget *widget = tabWidget->widget(index);
+    
+    // Remove the tab from tabWidget first
+    tabWidget->removeTab(index);
+    
+    // Then remove from our list
     editorTabs.removeAt(index);
     
-    // Get the widget and remove the tab
-    QWidget *widget = tabWidget->widget(index);
-    tabWidget->removeTab(index);
+    // Re-enable signals
+    tabWidget->blockSignals(false);
+    
+    // Delete the widget
     delete widget;
 
+    // Manually trigger updates since signals were blocked
+    updateActionsState();
+    
     // Update window title
     if (tabWidget->count() == 0) {
         // All tabs closed - just update the title, don't create a new tab
         setWindowTitle(QString("%1 - %2").arg(tr("No Open Files"), QApplication::applicationName()));
     } else {
         updateWindowTitle();
+        updateWordCount();
+        updateOutline();
     }
-    updateActionsState();
 }
 
 bool MainWindow::maybeSaveCurrentTab()
