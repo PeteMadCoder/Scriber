@@ -80,23 +80,45 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    // QPointer and Qt parent-child hierarchy handle cleanup automatically
+    // Disconnect signals to prevent callbacks during destruction
+    for (const EditorTab &tab : editorTabs) {
+        if (tab.editor) {
+            disconnect(tab.editor->document(), nullptr, this, nullptr);
+            disconnect(tab.editor, nullptr, this, nullptr);
+        }
+    }
+    editorTabs.clear();
+    
+    // Qt's parent-child hierarchy will handle widget cleanup
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    // Check all tabs for unsaved changes
-    for (int i = 0; i < editorTabs.size(); ++i) {
+    // Check all tabs for unsaved changes (iterate in reverse to handle potential removals)
+    for (int i = editorTabs.size() - 1; i >= 0; --i) {
         const EditorTab &tab = editorTabs[i];
         if (tab.editor && tab.editor->document()->isModified()) {
             tabWidget->setCurrentIndex(i);
-            if (!maybeSaveCurrentTab()) {
+            const QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Scriber"),
+                                   tr("The document has been modified.\n"
+                                      "Do you want to save your changes?"),
+                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            switch (ret) {
+            case QMessageBox::Save:
+                if (!save()) {
+                    event->ignore();
+                    return;
+                }
+                break;
+            case QMessageBox::Cancel:
                 event->ignore();
                 return;
+            default:
+                break;
             }
         }
     }
-    
+
     saveSettings();
     event->accept();
 }
