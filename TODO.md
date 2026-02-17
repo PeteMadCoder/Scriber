@@ -29,6 +29,18 @@
     - Implement debouncing for syntax highlighting and spell checking to prevent UI lag on large documents.
     - Investigate `QPlainTextEdit` performance bottlenecks.
 
+## UI/UX Enhancements (Planned)
+- [ ] **Multiple File Support (Tabs)**:
+    - Implement a tabbed interface (using `QTabWidget`) to allow opening and editing multiple files simultaneously.
+- [ ] **Enhanced Sidebar Navigation**:
+    - Improve sidebar to mimic xed's file browser.
+    - Add "Go Up / Parent Directory" button.
+    - Show current directory path.
+    - Allow basic file management (create, delete, rename).
+- [ ] **Global Application Theming**:
+    - Extend themes (Dark, Pitch Black) to style the entire application UI (menus, status bar, sidebar), not just the editor widget.
+    - Replace "Toggle Theme" with a "Select Theme" menu or dialog for explicit choice.
+
 ## Under Consideration (Not Priority)
 *These features are complex and currently under review. Implementation is not guaranteed.*
 
