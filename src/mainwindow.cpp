@@ -344,21 +344,42 @@ void MainWindow::setCurrentFile(const QString &fileName)
         }
     }
     setWindowFilePath(shownName); // Sets the window title with the file path
-    setWindowTitle(QString("%1[*] - %2").arg(shownName, QApplication::applicationName())); // [*] shows modified state
+    
+    bool modified = editor->document()->isModified();
+    QString title = QString("%1%2%3 - %4").arg(
+        modified ? "*" : "",
+        shownName, 
+        modified ? "*" : "",
+        QApplication::applicationName()
+    );
+    setWindowTitle(title);
 }
 
 void MainWindow::createStatusBar() {
     // Sidebar toggle button
-    QPushButton *sidebarToggleBtn = new QPushButton(tr("Sidebar"), this);
+    QPushButton *sidebarToggleBtn = new QPushButton(this);
     sidebarToggleBtn->setCheckable(true);
     sidebarToggleBtn->setFlat(true);
+    sidebarToggleBtn->setToolTip(tr("Toggle Sidebar"));
+    
+    // Try to find a suitable icon
+    QIcon sidebarIcon = QIcon::fromTheme("view-sidebar", QIcon::fromTheme("sidebar", QIcon::fromTheme("format-justify-left")));
+    if (sidebarIcon.isNull()) {
+        sidebarToggleBtn->setText("Sidebar"); // Fallback text
+    } else {
+        sidebarToggleBtn->setIcon(sidebarIcon);
+    }
+
     // Initial state
     if (sidebarDock) {
         sidebarToggleBtn->setChecked(sidebarDock->isVisible());
         connect(sidebarToggleBtn, &QPushButton::clicked, toggleSidebarAct, &QAction::trigger);
         connect(toggleSidebarAct, &QAction::toggled, sidebarToggleBtn, &QPushButton::setChecked);
     }
-    statusBar()->addWidget(sidebarToggleBtn);
+    
+    // Add to permanent widgets (so it's not covered by temporary messages like "Ready")
+    // Insert at index 0 to be on the left of other permanent widgets
+    statusBar()->insertPermanentWidget(0, sidebarToggleBtn);
 
     wordCountLabel = new QLabel(tr("Words: 0"));
     charCountLabel = new QLabel(tr("Chars: 0"));
@@ -648,6 +669,19 @@ void MainWindow::onFindNext()
 void MainWindow::documentWasModified()
 {
     setWindowModified(editor->document()->isModified());
+    
+    // Update title with prefix *
+    QString shownName = currentFile;
+    if (currentFile.isEmpty()) shownName = "untitled.md";
+    
+    bool modified = editor->document()->isModified();
+    QString title = QString("%1%2%3 - %4").arg(
+        modified ? "*" : "",
+        shownName,
+        modified ? "*" : "",
+        QApplication::applicationName()
+    );
+    setWindowTitle(title);
 }
 
 void MainWindow::onFindPrevious()
