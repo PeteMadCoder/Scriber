@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     
     // Process the actual command line arguments
     parser.process(app);
-    
+
     // Check if a file was specified
     const QStringList args = parser.positionalArguments();
     if (!args.isEmpty()) {
@@ -37,11 +37,9 @@ int main(int argc, char *argv[])
             window.openFile(filePath);
         } else {
             qWarning() << "File does not exist:" << filePath;
-            window.newFile();
         }
-    } else {
-        window.newFile();
     }
+    // MainWindow constructor already creates an initial tab
 
     window.show();
     return app.exec();

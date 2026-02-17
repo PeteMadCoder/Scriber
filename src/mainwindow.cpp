@@ -47,14 +47,6 @@ MainWindow::MainWindow(QWidget *parent)
       exportHtmlAct(this), exportPdfAct(this), exitAct(this),
       toggleThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this)
 {
-    // Create the tab widget
-    tabWidget = new QTabWidget(this);
-    tabWidget->setTabsClosable(true);
-    tabWidget->setMovable(true);
-    tabWidget->setDocumentMode(true);
-    
-    setCentralWidget(tabWidget);
-
     fileManager = new FileManager(this);
 
     resize(1200, 800);
@@ -62,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     createActions();
     createSidebar();
     createMenus();
-    createFindBar();
+    createFindBar();  // This sets up tabWidget and central widget
     createStatusBar();
     loadSettings();
 
@@ -76,8 +68,12 @@ MainWindow::MainWindow(QWidget *parent)
     outlineTimer->setInterval(1000);
     connect(outlineTimer, &QTimer::timeout, this, &MainWindow::updateOutline);
 
-    // Create initial empty tab
+    // Create initial empty tab (block signals to avoid premature onTabChanged)
     newFile();
+
+    // Now connect tab signals (after initial tab is created)
+    connect(tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
+    connect(tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
 
     statusBar()->showMessage(tr("Ready"));
 }
@@ -290,9 +286,12 @@ void MainWindow::about()
 
 void MainWindow::onTabChanged(int index)
 {
-    updateWindowTitle();
-    updateWordCount();
-    updateOutline();
+    updateActionsState();
+    if (index >= 0 && index < editorTabs.size()) {
+        updateWindowTitle();
+        updateWordCount();
+        updateOutline();
+    }
 }
 
 void MainWindow::closeTab(int index)
@@ -325,12 +324,14 @@ void MainWindow::closeTab(int index)
     tabWidget->removeTab(index);
     delete widget;
 
-    // Update window title if we still have tabs
+    // Update window title
     if (tabWidget->count() == 0) {
-        newFile(); // Create a new empty tab if all were closed
+        // All tabs closed - just update the title, don't create a new tab
+        setWindowTitle(QString("%1 - %2").arg(tr("No Open Files"), QApplication::applicationName()));
     } else {
         updateWindowTitle();
     }
+    updateActionsState();
 }
 
 bool MainWindow::maybeSaveCurrentTab()
@@ -426,7 +427,7 @@ void MainWindow::updateWindowTitle()
 {
     int currentIndex = tabWidget->currentIndex();
     if (currentIndex < 0 || currentIndex >= editorTabs.size()) {
-        setWindowTitle(tr("Scriber"));
+        setWindowTitle(QString("%1 - %2").arg(tr("No Open Files"), QApplication::applicationName()));
         return;
     }
 
@@ -434,6 +435,17 @@ void MainWindow::updateWindowTitle()
     QString fileName = tab.filePath.isEmpty() ? tr("Untitled") : tab.filePath;
 
     setWindowTitle(QString("%1 - %2").arg(fileName, QApplication::applicationName()));
+}
+
+void MainWindow::updateActionsState()
+{
+    bool hasTabs = editorTabs.size() > 0;
+    saveAct.setEnabled(hasTabs);
+    saveAsAct.setEnabled(hasTabs);
+    exportHtmlAct.setEnabled(hasTabs);
+    exportPdfAct.setEnabled(hasTabs);
+    closeTabAct.setEnabled(hasTabs);
+    findAct.setEnabled(hasTabs);
 }
 
 void MainWindow::createStatusBar() {
@@ -663,6 +675,12 @@ void MainWindow::onOutlineItemClicked(QTreeWidgetItem *item, int column)
 
 void MainWindow::createFindBar()
 {
+    // Create the tab widget first
+    tabWidget = new QTabWidget(this);
+    tabWidget->setTabsClosable(true);
+    tabWidget->setMovable(true);
+    tabWidget->setDocumentMode(true);
+
     findBarWidget = new QWidget(this);
     findBarWidget->setObjectName("findBar");
     findBarWidget->setVisible(false);

@@ -77,6 +77,7 @@ private:
     void openFileInNewTab(const QString &fileName);
     void updateTabTitle(int index);
     void updateWindowTitle();
+    void updateActionsState();
 
     void updateWordCount();
     QLabel *wordCountLabel;
