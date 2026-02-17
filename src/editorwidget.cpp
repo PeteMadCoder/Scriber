@@ -21,7 +21,7 @@ EditorWidget::EditorWidget(QWidget *parent)
     font.setFamily("Segoe UI, Arial, sans-serif");
     font.setPointSize(12);
     setFont(font);
-    
+
     // Set line spacing for better readability
     QTextBlockFormat blockFormat;
     blockFormat.setLineHeight(125, QTextBlockFormat::FixedHeight);
@@ -29,63 +29,65 @@ EditorWidget::EditorWidget(QWidget *parent)
 
     // Ensure no background color interference
     viewport()->setAutoFillBackground(false);
-    
+
     MarkdownHighlighter* mdHighlighter = new MarkdownHighlighter(document());
     highlighter.reset(mdHighlighter);
 
     applyTheme();
-    
+
     // Add keyboard shortcuts
-    QShortcut *boldShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_B), this);  // USE | INSTEAD OF +
+    QShortcut *boldShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_B), this);
     connect(boldShortcut, &QShortcut::activated, [this]() {
         insertMarkdownPair("**", "**");
     });
 
-    QShortcut *italicShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_I), this);  // USE | INSTEAD OF +
+    QShortcut *italicShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_I), this);
     connect(italicShortcut, &QShortcut::activated, [this]() {
         insertMarkdownPair("*", "*");
     });
 
-    QShortcut *codeShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this);  // USE | INSTEAD OF +
+    QShortcut *codeShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this);
     connect(codeShortcut, &QShortcut::activated, [this]() {
         insertMarkdownPair("`", "`");
     });
 
-    QShortcut *linkShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this);  // USE | INSTEAD OF +
+    QShortcut *linkShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this);
     connect(linkShortcut, &QShortcut::activated, [this]() {
         insertMarkdownPair("[", "](url)");
     });
 
     // --- Initialize Spell Checker ---
-    spellChecker.reset(new SpellChecker(this)); // Parent it to this widget for automatic cleanup
+    spellChecker.reset(new SpellChecker(this));
 
     // Attempt to load a default dictionary
     if (!spellChecker->loadDictionary("en_US")) {
         qWarning() << "EditorWidget: Failed to load default 'en_US' dictionary. Spell checking might not work.";
-        // You could try other fallback languages here if needed
     } else {
         qDebug() << "EditorWidget: Successfully loaded spell checker with 'en_US' dictionary.";
     }
 
     // Create a timer for delayed spell checking to avoid checking on every keystroke
     spellCheckTimer = new QTimer(this);
-    spellCheckTimer->setSingleShot(true); // Only fire once per start
-    spellCheckTimer->setInterval(500);   // 500ms delay
+    spellCheckTimer->setSingleShot(true);
+    spellCheckTimer->setInterval(500);
     connect(spellCheckTimer, &QTimer::timeout, this, &EditorWidget::checkSpelling);
 
     // Connect to text changes to trigger delayed spell checking
     connect(this, &QPlainTextEdit::textChanged, [this]() {
         if (spellCheckEnabled && spellChecker && spellChecker->isInitialized()) {
-            spellCheckTimer->start(); // Restarts the timer if already running
+            spellCheckTimer->start();
         }
     });
 
     // Initial spell check if enabled
     if (spellCheckEnabled) {
-        // Use a single-shot timer with 0 delay to defer the initial check
-        // until after the constructor finishes and the event loop starts.
         QTimer::singleShot(0, this, &EditorWidget::checkSpelling);
     }
+}
+
+EditorWidget::~EditorWidget()
+{
+    // QScopedPointer and Qt parent-child hierarchy handle cleanup automatically
 }
 
 void EditorWidget::toggleTheme()

@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QLabel>
+#include <QMap>
 
 class EditorWidget;
 class FileManager;
@@ -17,10 +18,17 @@ class QWidget;
 class QDockWidget;
 class QTreeView;
 class QFileSystemModel;
-class QTimer; // Forward declaration
+class QTimer;
 class QTabWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
+
+// Structure to track editor and file path per tab
+struct EditorTab {
+    EditorWidget *editor;
+    QString filePath;
+    bool isModified;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -47,11 +55,13 @@ private slots:
     void toggleTheme();
     void about();
     void find();
-    void onFindNext();      
-    void onFindPrevious(); 
+    void onFindNext();
+    void onFindPrevious();
     void onFindTextEdited();
     void hideFindBar();
     void documentWasModified();
+    void onTabChanged(int index);
+    void closeTab(int index);
 
 private:
     void createActions();
@@ -60,17 +70,21 @@ private:
     void loadSettings();
     void saveSettings();
     bool maybeSave();
+    bool maybeSaveCurrentTab();
     void setCurrentFile(const QString &fileName);
     void createFindBar();
     void createSidebar();
+    void openFileInNewTab(const QString &fileName);
+    void updateTabTitle(int index);
+    void updateWindowTitle();
 
     void updateWordCount();
     QLabel *wordCountLabel;
     QLabel *charCountLabel;
 
-    QPointer<EditorWidget> editor;
+    QTabWidget *tabWidget;
+    QList<EditorTab> editorTabs;
     QPointer<FileManager> fileManager;
-    QString currentFile;
 
     // Sidebar members
     QDockWidget *sidebarDock;
@@ -79,11 +93,11 @@ private:
     QTreeWidget *outlineTree;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
-    
-    QTimer *wordCountTimer; // Debounce word count updates
-    QTimer *outlineTimer; // Debounce outline updates
 
-    // Menu actions - Member objects
+    QTimer *wordCountTimer;
+    QTimer *outlineTimer;
+
+    // Menu actions
     QAction newAct;
     QAction openAct;
     QAction saveAct;
@@ -94,12 +108,13 @@ private:
     QAction toggleThemeAct;
     QAction aboutAct;
     QAction findAct;
+    QAction closeTabAct;
 
-    // --- Embedded Find Bar Members ---
+    // Find bar members
     bool isFindBarVisible;
     QWidget *findBarWidget;
     QLineEdit *findLineEdit;
-    QLabel *findStatusLabel;    
+    QLabel *findStatusLabel;
     QCheckBox *caseSensitiveCheckBox;
     QCheckBox *wholeWordsCheckBox;
     QPushButton *findNextButton;

@@ -24,6 +24,7 @@ public:
     };
 
     explicit EditorWidget(QWidget *parent = nullptr);
+    ~EditorWidget();
 
     void toggleTheme(); // Cycle through themes
     void zoomIn(int steps = 1);
