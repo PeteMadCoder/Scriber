@@ -10,17 +10,30 @@
 #include <QFileDialog>
 #include <QDir>
 #include <QApplication>
+#include <cmark.h>
 
 FileManager::FileManager(QObject *parent) : QObject(parent)
 {
 
 }
 
+QString FileManager::convertMarkdownToHtml(const QString &markdown)
+{
+    QByteArray utf8 = markdown.toUtf8();
+    char *html = cmark_markdown_to_html(utf8.constData(), utf8.size(), CMARK_OPT_DEFAULT);
+    if (!html) {
+        return QString();
+    }
+    QString result = QString::fromUtf8(html);
+    free(html);
+    return result;
+}
+
 bool FileManager::loadFile(const QString &fileName, EditorWidget *editor)
 {
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(nullptr, tr("Inkflow"),
+        QMessageBox::warning(nullptr, tr("Scriber"),
                              tr("Cannot read file %1:\n%2.")
                              .arg(QDir::toNativeSeparators(fileName), file.errorString()));
         return false;
@@ -44,7 +57,7 @@ bool FileManager::saveFile(const QString &fileName, EditorWidget *editor)
 {
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(nullptr, tr("Inkflow"),
+        QMessageBox::warning(nullptr, tr("Scriber"),
                              tr("Cannot write file %1:\n%2.")
                              .arg(QDir::toNativeSeparators(fileName), file.errorString()));
         return false;
@@ -68,7 +81,7 @@ bool FileManager::exportToHtml(const QString &fileName, EditorWidget *editor)
 {
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(nullptr, tr("Inkflow"),
+        QMessageBox::warning(nullptr, tr("Scriber"),
                              tr("Cannot write file %1:\n%2.")
                              .arg(QDir::toNativeSeparators(fileName), file.errorString()));
         return false;
@@ -78,21 +91,26 @@ bool FileManager::exportToHtml(const QString &fileName, EditorWidget *editor)
 #ifndef QT_NO_CURSOR
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
-    // Simple approach: Save the plain text as HTML-escaped content inside basic HTML
-    // out << "<html><body><pre>" << editor->toPlainText().toHtmlEscaped() << "</pre></body></html>";
-
-    // Better approach: Use QTextDocument's HTML conversion (but this converts the *formatted* view, not raw MD)
-    // This requires parsing Markdown to HTML first (e.g., with cmark) and setting it on a temp document
-    // Or, if using a hybrid approach where the QTextDocument *is* the rendered HTML, you get it directly.
-
-    // For now, assuming EditorWidget contains raw Markdown:
-    // You would need to integrate cmark here to convert editor->toPlainText() to HTML string
-    // QString markdownText = editor->toPlainText();
-    // QString htmlString = convertMarkdownToHtml(markdownText); // <-- Implement this function using cmark
-    // out << htmlString;
-
-    // Placeholder using QTextDocument's conversion (shows formatted view as HTML):
-    out << editor->document()->toHtml(); // This exports the *rendered* HTML based on QTextDocument state
+    
+    QString htmlContent = convertMarkdownToHtml(editor->toPlainText());
+    
+    // Wrap in a basic HTML structure
+    out << "<!DOCTYPE html>\n";
+    out << "<html>\n<head>\n";
+    out << "<meta charset=\"utf-8\">\n";
+    out << "<title>" << QFileInfo(fileName).baseName() << "</title>\n";
+    out << "<style>\n";
+    out << "body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; }\n";
+    out << "pre { background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; }\n";
+    out << "code { background-color: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; }\n";
+    out << "blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 1em; color: #666; }\n";
+    out << "table { border-collapse: collapse; width: 100%; margin: 1em 0; }\n";
+    out << "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n";
+    out << "th { background-color: #f4f4f4; }\n";
+    out << "</style>\n";
+    out << "</head>\n<body>\n";
+    out << htmlContent;
+    out << "\n</body>\n</html>";
 
 #ifndef QT_NO_CURSOR
     QApplication::restoreOverrideCursor();
@@ -112,21 +130,25 @@ bool FileManager::exportToPdf(const QString &fileName, EditorWidget *editor)
 #ifndef QT_NO_CURSOR
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
-    // Similar to HTML export, this prints the *rendered* QTextDocument
-    // Again, for true Markdown -> PDF, parse with cmark -> HTML -> QTextDocument -> PDF
-    editor->document()->print(&printer);
+    
+    QString htmlContent = convertMarkdownToHtml(editor->toPlainText());
+    
+    // Use a temporary QTextDocument to render the HTML for printing
+    QTextDocument doc;
+    // Add some basic styling for the PDF rendering
+    QString styledHtml = QString(
+        "<html><head><style>"
+        "body { font-family: sans-serif; }"
+        "pre { background-color: #f4f4f4; padding: 10px; }"
+        "code { background-color: #f4f4f4; }"
+        "blockquote { border-left: 4px solid #ddd; padding-left: 10px; color: #666; }"
+        "</style></head><body>%1</body></html>").arg(htmlContent);
+        
+    doc.setHtml(styledHtml);
+    doc.print(&printer);
+
 #ifndef QT_NO_CURSOR
     QApplication::restoreOverrideCursor();
 #endif
     return true;
 }
-
-// QString FileManager::convertMarkdownToHtml(const QString &markdown) {
-//     // Integrate cmark library here
-//     // 1. Convert QString to null-terminated char* (or use cmark's UTF-8 functions)
-//     // 2. Call cmark functions: cmark_parse_document(), cmark_render_html()
-//     // 3. Convert result back to QString
-//     // 4. Return QString
-//     // Remember to free cmark memory!
-//     return QString(); // Placeholder
-// }

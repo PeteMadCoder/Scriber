@@ -22,4 +22,5 @@ signals:
 
 private:
     // Helper functions if needed
+    QString convertMarkdownToHtml(const QString &markdown);
 };

@@ -15,9 +15,10 @@
     - (Optional) Translate UI strings if applicable.
 
 ## Advanced Integration
-- [ ] **Integrate `cmark`**:
-    - Replace or augment the current Regex-based Markdown parsing with `cmark` (CommonMark) for better accuracy and performance.
-    - Use the AST for cleaner export to HTML/PDF.
+- [x] **Integrate `cmark`**:
+    - [x] Use `cmark` for HTML/PDF export.
+    - [ ] Replace or augment the current Regex-based Markdown parsing with `cmark` (CommonMark) for better accuracy and performance.
+    - [ ] Use the AST for cleaner export to HTML/PDF.
 - [x] **Sidebar File Explorer**:
     - Implement a toggleable sidebar showing a file tree view of the current directory (similar to xed).
 - [x] **Multi-language Code Block Highlighting**:

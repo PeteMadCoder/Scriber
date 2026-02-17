@@ -44,6 +44,16 @@ target_include_directories(scriber PRIVATE
     ${HUNSPELL_INCLUDE_DIRS}
 )
 
+include(FetchContent)
+
+FetchContent_Declare(
+    cmark
+    GIT_REPOSITORY https://github.com/commonmark/cmark.git
+    GIT_TAG        0.30.2  # Use a specific tag for stability
+)
+
+FetchContent_MakeAvailable(cmark)
+
 # --- Link libraries - REMOVE Qt6::Core5Compat ---
 target_link_libraries(scriber PRIVATE
     Qt6::Core
@@ -51,6 +61,7 @@ target_link_libraries(scriber PRIVATE
     Qt6::PrintSupport
     # Qt6::Core5Compat # <-- REMOVED
     ${HUNSPELL_LIBRARIES}
+    cmark::cmark
 )
 # --- END Link libraries ---
 
