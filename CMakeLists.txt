@@ -27,18 +27,22 @@ add_custom_command(
 
 # --- Create the executable ---
 qt_add_executable(scriber
-    main.cpp
-    mainwindow.h mainwindow.cpp
-    editorwidget.h editorwidget.cpp
-    markdownhighlighter.h markdownhighlighter.cpp
-    filemanager.h filemanager.cpp
-    spellchecker.h spellchecker.cpp
+    src/main.cpp
+    include/mainwindow.h src/mainwindow.cpp
+    include/editorwidget.h src/editorwidget.cpp
+    include/markdownhighlighter.h src/markdownhighlighter.cpp
+    include/filemanager.h src/filemanager.cpp
+    include/spellchecker.h src/spellchecker.cpp
     ${RESOURCE_CPP}
 )
 # --- END Create executable ---
 
 # Include directories
-target_include_directories(scriber PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${HUNSPELL_INCLUDE_DIRS})
+target_include_directories(scriber PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${HUNSPELL_INCLUDE_DIRS}
+)
 
 # --- Link libraries - REMOVE Qt6::Core5Compat ---
 target_link_libraries(scriber PRIVATE

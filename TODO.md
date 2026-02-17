@@ -1,16 +1,16 @@
 # Project Roadmap & TODOs
 
 ## Refactoring & Architecture
-- [ ] **Restructure Project Layout**: Move source code into `src/`, headers into `include/`, and resources into `resources/` (standard C++ structure). Ensure CMake build system is updated to reflect these changes.
+- [x] **Restructure Project Layout**: Move source code into `src/`, headers into `include/`, and resources into `resources/` (standard C++ structure). Ensure CMake build system is updated to reflect these changes.
 
 ## Core Features & Fixes
-- [ ] **Fix Unsaved Changes Indicator**: 
+- [x] **Fix Unsaved Changes Indicator**: 
     - Add a `*` suffix to the window title/tab when the file has unsaved changes (dirty state).
     - Remove the `*` immediately upon saving.
     - Fix the "Save Changes?" popup logic: only show it if the file is truly "dirty" (unsaved modification).
-- [ ] **Pitch Black Theme**:
+- [x] **Pitch Black Theme**:
     - Add a new theme with `#000000` background and off-white/grey text (high contrast, OLED friendly).
-- [ ] **Portuguese Localization**:
+- [x] **Portuguese Localization**:
     - Add Portuguese (pt-PT/pt-BR) to the spellchecker supported languages.
     - (Optional) Translate UI strings if applicable.
 
@@ -18,9 +18,9 @@
 - [ ] **Integrate `cmark`**:
     - Replace or augment the current Regex-based Markdown parsing with `cmark` (CommonMark) for better accuracy and performance.
     - Use the AST for cleaner export to HTML/PDF.
-- [ ] **Sidebar File Explorer**:
+- [x] **Sidebar File Explorer**:
     - Implement a toggleable sidebar showing a file tree view of the current directory (similar to xed).
-- [ ] **Multi-language Code Block Highlighting**:
+- [x] **Multi-language Code Block Highlighting**:
     - Implement syntax highlighting for code blocks within Markdown files (e.g., Python, C++, Bash).
     - Consider using `KSyntaxHighlighting` or `cmark`'s AST for language detection.
 

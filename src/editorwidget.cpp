@@ -15,7 +15,7 @@
 
 
 EditorWidget::EditorWidget(QWidget *parent)
-    : QPlainTextEdit(parent), darkTheme(true), currentZoom(0)
+    : QPlainTextEdit(parent), currentTheme(Theme::Dark), currentZoom(0)
 {
     QFont font;
     font.setFamily("Segoe UI, Arial, sans-serif");
@@ -90,16 +90,35 @@ EditorWidget::EditorWidget(QWidget *parent)
 
 void EditorWidget::toggleTheme()
 {
-    darkTheme = !darkTheme;
+    if (currentTheme == Theme::Light) {
+        currentTheme = Theme::Dark;
+    } else if (currentTheme == Theme::Dark) {
+        currentTheme = Theme::PitchBlack;
+    } else {
+        currentTheme = Theme::Light;
+    }
+    
     applyTheme();
     if (highlighter) {
-        highlighter->setTheme(darkTheme ? MarkdownHighlighter::Theme::Dark : MarkdownHighlighter::Theme::Light);
+        MarkdownHighlighter::Theme hlTheme = MarkdownHighlighter::Theme::Light;
+        if (currentTheme == Theme::Dark) hlTheme = MarkdownHighlighter::Theme::Dark;
+        else if (currentTheme == Theme::PitchBlack) hlTheme = MarkdownHighlighter::Theme::PitchBlack;
+        
+        highlighter->setTheme(hlTheme);
     }
 }
 
 void EditorWidget::applyTheme()
 {
-    QString themeFile = darkTheme ? ":/resources/themes/dark.css" : ":/resources/themes/light.css";
+    QString themeFile;
+    if (currentTheme == Theme::Dark) {
+        themeFile = ":/resources/themes/dark.css";
+    } else if (currentTheme == Theme::PitchBlack) {
+        themeFile = ":/resources/themes/pitchblack.css";
+    } else {
+        themeFile = ":/resources/themes/light.css";
+    }
+
     QFile file(themeFile);
     QString styleSheet;
     
@@ -108,17 +127,23 @@ void EditorWidget::applyTheme()
         styleSheet = in.readAll();
         file.close();
         setStyleSheet(styleSheet);
-        qDebug() << "Applied theme:" << (darkTheme ? "Dark" : "Light");
+        qDebug() << "Applied theme:" << themeFile;
     } else {
         qDebug() << "Could not open theme file:" << themeFile;
         // Fallback to explicit palette
         QPalette p = qApp->palette();
-        if (darkTheme) {
-            // DARK THEME FALLBACK - IMPROVED
+        if (currentTheme == Theme::Dark) {
+            // DARK THEME FALLBACK
             p.setColor(QPalette::Base, QColor(30, 30, 30));
-            p.setColor(QPalette::Text, QColor(225, 228, 232));  // Very light gray
+            p.setColor(QPalette::Text, QColor(225, 228, 232));
             p.setColor(QPalette::Window, QColor(50, 50, 50));
             p.setColor(QPalette::WindowText, QColor(240, 240, 240));
+        } else if (currentTheme == Theme::PitchBlack) {
+            // PITCH BLACK FALLBACK
+            p.setColor(QPalette::Base, Qt::black);
+            p.setColor(QPalette::Text, QColor(224, 224, 224));
+            p.setColor(QPalette::Window, Qt::black);
+            p.setColor(QPalette::WindowText, QColor(224, 224, 224));
         } else {
             // Light theme fallback
             p.setColor(QPalette::Base, Qt::white);
@@ -130,7 +155,7 @@ void EditorWidget::applyTheme()
         }
         setPalette(p);
         setAutoFillBackground(true);
-        qDebug() << "Using palette fallback for" << (darkTheme ? "dark" : "light") << "theme";
+        qDebug() << "Using palette fallback for theme";
     }
     
     // Force re-highlighting to ensure new colors are applied

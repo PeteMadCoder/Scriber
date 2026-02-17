@@ -14,6 +14,9 @@ class QLabel;
 class QCheckBox;
 class QPushButton;
 class QWidget;
+class QDockWidget;
+class QTreeView;
+class QFileSystemModel;
 
 class MainWindow : public QMainWindow
 {
@@ -31,8 +34,8 @@ protected:
 
 private slots:
     void open();
-    void save();
-    void saveAs();
+    bool save();
+    bool saveAs();
     void exportToHtml();
     void exportToPdf();
     void toggleTheme();
@@ -42,6 +45,7 @@ private slots:
     void onFindPrevious(); 
     void onFindTextEdited();
     void hideFindBar();
+    void documentWasModified();
 
 private:
     void createActions();
@@ -52,6 +56,7 @@ private:
     bool maybeSave();
     void setCurrentFile(const QString &fileName);
     void createFindBar();
+    void createSidebar();
 
     void updateWordCount();
     QLabel *wordCountLabel;
@@ -60,6 +65,12 @@ private:
     QPointer<EditorWidget> editor;
     QPointer<FileManager> fileManager;
     QString currentFile;
+
+    // Sidebar members
+    QDockWidget *sidebarDock;
+    QTreeView *fileTreeView;
+    QFileSystemModel *fileSystemModel;
+    QAction *toggleSidebarAct;
 
     // Menu actions - Member objects
     QAction newAct;

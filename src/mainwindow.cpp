@@ -27,6 +27,10 @@
 #include <QWidget>
 #include <QKeyEvent>
 #include <QStatusBar>
+#include <QDockWidget>
+#include <QTreeView>
+#include <QFileSystemModel>
+#include <QHeaderView>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -46,10 +50,14 @@ MainWindow::MainWindow(QWidget *parent)
     resize(1200, 800);
 
     createActions();
+    createSidebar(); // Must be called before createMenus so the action exists
     createMenus();
     createFindBar();
     createStatusBar();
     loadSettings();
+
+    connect(editor->document(), &QTextDocument::modificationChanged,
+            this, &MainWindow::documentWasModified);
 
     setCurrentFile(QString());
     statusBar()->showMessage(tr("Ready"));
@@ -90,22 +98,22 @@ void MainWindow::open()
     }
 }
 
-void MainWindow::save()
+bool MainWindow::save()
 {
     if (currentFile.isEmpty()) {
-        saveAs();
+        return saveAs();
     } else {
-        fileManager->saveFile(currentFile, editor);
+        return fileManager->saveFile(currentFile, editor);
     }
 }
 
-void MainWindow::saveAs()
+bool MainWindow::saveAs()
 {
     QString fileName = QFileDialog::getSaveFileName(this,
                                                     tr("Save As"), "",
                                                     tr("Markdown Files (*.md);;Text Files (*.txt);;All Files (*)"));
     if (fileName.isEmpty())
-        return;
+        return false;
 
     // Ensure .md extension if none provided and user selected Markdown filter
     QFileInfo fileInfo(fileName);
@@ -113,8 +121,11 @@ void MainWindow::saveAs()
          fileName += ".md";
     }
 
-    fileManager->saveFile(fileName, editor);
-    setCurrentFile(fileName);
+    if (fileManager->saveFile(fileName, editor)) {
+        setCurrentFile(fileName);
+        return true;
+    }
+    return false;
 }
 
 void MainWindow::exportToHtml() {
@@ -150,6 +161,7 @@ void MainWindow::about()
                            "Version %1")
                         .arg(QApplication::applicationVersion()));
 }
+
 
 void MainWindow::createActions()
 {
@@ -216,6 +228,7 @@ void MainWindow::createMenus()
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
     viewMenu->addAction(&toggleThemeAct);
+    viewMenu->addAction(toggleSidebarAct);
 
     // --- Add Spell Check Menu ---
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
@@ -242,6 +255,8 @@ void MainWindow::createMenus()
         {"fr_FR", "Français"},
         {"de_DE", "Deutsch"},
         {"es_ES", "Español"},
+        {"pt_PT", "Português (Portugal)"},
+        {"pt_BR", "Português (Brasil)"},
         // Add more languages supported by your system's hunspell dictionaries
     };
 
@@ -294,17 +309,21 @@ void MainWindow::saveSettings()
 
 bool MainWindow::maybeSave()
 {
-    // Check if the document in editor is modified
-    if (editor->document()->isModified()) {
-        QMessageBox::StandardButton ret;
-        ret = QMessageBox::warning(this, tr("Scriber"),
-                                   tr("The document has been modified.\n"
-                                      "Do you want to save your changes?"),
-                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-        if (ret == QMessageBox::Save)
-            return fileManager->saveFile(currentFile, editor); // This needs to handle Save As if currentFile is empty
-        else if (ret == QMessageBox::Cancel)
-            return false;
+    if (!editor->document()->isModified())
+        return true;
+    
+    const QMessageBox::StandardButton ret
+        = QMessageBox::warning(this, tr("Scriber"),
+                               tr("The document has been modified.\n"
+                                  "Do you want to save your changes?"),
+                               QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+    switch (ret) {
+    case QMessageBox::Save:
+        return save();
+    case QMessageBox::Cancel:
+        return false;
+    default:
+        break;
     }
     return true;
 }
@@ -316,6 +335,14 @@ void MainWindow::setCurrentFile(const QString &fileName)
     QString shownName = currentFile;
     if (currentFile.isEmpty())
         shownName = "untitled.md";
+    else {
+        // Update sidebar to show the directory of the current file
+        if (fileTreeView && fileSystemModel) {
+            QFileInfo fi(currentFile);
+            QString dirPath = fi.absolutePath();
+            fileTreeView->setRootIndex(fileSystemModel->setRootPath(dirPath));
+        }
+    }
     setWindowFilePath(shownName); // Sets the window title with the file path
     setWindowTitle(QString("%1[*] - %2").arg(shownName, QApplication::applicationName())); // [*] shows modified state
 }
@@ -365,6 +392,57 @@ void MainWindow::openFile(const QString &path)
                                  .arg(QDir::toNativeSeparators(fileName), file.errorString()));
         }
     }
+}
+
+void MainWindow::createSidebar()
+{
+    // Create the dock widget
+    sidebarDock = new QDockWidget(tr("Files"), this);
+    sidebarDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    
+    // Create the tree view
+    fileTreeView = new QTreeView(sidebarDock);
+    fileSystemModel = new QFileSystemModel(this);
+    
+    // Initial path
+    QString initialPath = QDir::currentPath();
+    fileSystemModel->setRootPath(initialPath);
+    fileSystemModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
+    
+    QStringList nameFilters;
+    nameFilters << "*.md" << "*.markdown" << "*.txt";
+    fileSystemModel->setNameFilters(nameFilters);
+    fileSystemModel->setNameFilterDisables(false); // Hide files that don't match
+
+    fileTreeView->setModel(fileSystemModel);
+    fileTreeView->setRootIndex(fileSystemModel->index(initialPath));
+    
+    // Hide columns except Name
+    fileTreeView->setColumnHidden(1, true); // Size
+    fileTreeView->setColumnHidden(2, true); // Type
+    fileTreeView->setColumnHidden(3, true); // Date Modified
+    fileTreeView->header()->setVisible(false);
+
+    sidebarDock->setWidget(fileTreeView);
+    addDockWidget(Qt::LeftDockWidgetArea, sidebarDock);
+
+    // Connect double click to open file
+    connect(fileTreeView, &QTreeView::doubleClicked, [this](const QModelIndex &index) {
+        QString filePath = fileSystemModel->filePath(index);
+        QFileInfo fileInfo(filePath);
+        if (fileInfo.isFile()) {
+            if (maybeSave()) {
+                if (fileManager->loadFile(filePath, editor)) {
+                     setCurrentFile(filePath);
+                }
+            }
+        }
+    });
+    
+    // Create toggle action
+    toggleSidebarAct = sidebarDock->toggleViewAction();
+    toggleSidebarAct->setText(tr("&Sidebar"));
+    toggleSidebarAct->setStatusTip(tr("Show or hide the file sidebar"));
 }
 
 void MainWindow::createFindBar()
@@ -553,6 +631,11 @@ void MainWindow::onFindNext()
         findStatusLabel->setStyleSheet("QLabel { color : gray; }");
     }
     // If found, the editor's cursor is automatically moved and the text is selected.
+}
+
+void MainWindow::documentWasModified()
+{
+    setWindowModified(editor->document()->isModified());
 }
 
 void MainWindow::onFindPrevious()

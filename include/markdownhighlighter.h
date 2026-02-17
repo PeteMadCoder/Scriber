@@ -16,7 +16,8 @@ class MarkdownHighlighter : public QSyntaxHighlighter
 public:
     enum class Theme {
         Light,
-        Dark
+        Dark,
+        PitchBlack
     };
     explicit MarkdownHighlighter(QTextDocument *parent = nullptr);
 
@@ -36,6 +37,9 @@ private:
         bool isMultiLine = false; // For elements that span multiple lines
     };
     QVector<HighlightingRule> highlightingRules;
+    QVector<HighlightingRule> pythonRules;
+    QVector<HighlightingRule> cppRules;
+    QVector<HighlightingRule> bashRules;
 
     // Formats for different Markdown elements
     QTextCharFormat heading1Format;
@@ -97,6 +101,7 @@ private:
 
     ThemeColors lightColors;
     ThemeColors darkColors;
+    ThemeColors pitchBlackColors;
     ThemeColors currentColors;
 
     Theme currentTheme;
@@ -109,4 +114,19 @@ private:
     static const int STATE_NORMAL = 0;
     static const int STATE_IN_CODE_BLOCK = 1;
     static const int STATE_IN_TABLE = 2;
+    static const int STATE_IN_CODE_BLOCK_PYTHON = 10;
+    static const int STATE_IN_CODE_BLOCK_CPP = 11;
+    static const int STATE_IN_CODE_BLOCK_BASH = 12;
+    
+    // Additional formats for code
+    QTextCharFormat keywordFormat;
+    QTextCharFormat commentFormat;
+    QTextCharFormat stringFormat;
+    QTextCharFormat numberFormat;
+    QTextCharFormat functionFormat;
+    
+    void setupPythonRules();
+    void setupCppRules();
+    void setupBashRules();
+    void highlightCodeBlock(const QString &text, int languageState);
 };

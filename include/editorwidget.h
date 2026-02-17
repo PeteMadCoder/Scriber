@@ -17,9 +17,15 @@ class EditorWidget : public QPlainTextEdit
     Q_OBJECT
 
 public:
+    enum class Theme {
+        Light,
+        Dark,
+        PitchBlack
+    };
+
     explicit EditorWidget(QWidget *parent = nullptr);
 
-    void toggleTheme(); // Switch between light/dark
+    void toggleTheme(); // Cycle through themes
     void zoomIn(int steps = 1);
     void zoomOut(int steps = 1);
     int getCurrentZoom() const { return currentZoom; }
@@ -41,7 +47,7 @@ private slots:
 
 private:
     QScopedPointer<MarkdownHighlighter> highlighter; // Manage the highlighter's lifetime
-    bool darkTheme; // Track current theme state
+    Theme currentTheme; // Track current theme state
     int currentZoom;
 
     void applyTheme(); // Apply the current theme (palette, stylesheet)
