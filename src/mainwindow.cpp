@@ -528,104 +528,92 @@ void MainWindow::updateOutline()
     if (!outlineTree) return;
 
     outlineTree->clear();
-    
+
     QString markdown = editor->toPlainText();
     QByteArray utf8 = markdown.toUtf8();
-    
+
+    qDebug() << "updateOutline: Document size:" << utf8.size() << "bytes";
+    qDebug() << "updateOutline: Document preview:" << markdown.left(100);
+
     // Parse document using cmark
     cmark_node *doc = cmark_parse_document(utf8.constData(), utf8.size(), CMARK_OPT_DEFAULT);
-    if (!doc) return;
+    if (!doc) {
+        qDebug() << "updateOutline: Failed to parse document";
+        return;
+    }
 
     cmark_iter *iter = cmark_iter_new(doc);
     cmark_event_type ev_type;
-    
+
     QList<QTreeWidgetItem*> parents; // Stack for hierarchy
     parents.append(nullptr); // Root level
 
+    int headingCount = 0;
+
     while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
         cmark_node *cur = cmark_iter_get_node(iter);
-        
-        if (ev_type == CMARK_EVENT_ENTER && cmark_node_get_type(cur) == CMARK_NODE_HEADING) {
+        cmark_node_type nodeType = cmark_node_get_type(cur);
+
+        qDebug() << "updateOutline: Node type:" << nodeType << "CMARK_NODE_HEADING:" << CMARK_NODE_HEADING;
+
+        if (ev_type == CMARK_EVENT_ENTER && nodeType == CMARK_NODE_HEADING) {
+            headingCount++;
             int level = cmark_node_get_heading_level(cur);
             int startLine = cmark_node_get_start_line(cur);
-            
+
+            qDebug() << "updateOutline: Found heading! Level:" << level << "Line:" << startLine;
+
             // Extract text content of the heading
             QString headingText;
             cmark_iter *subIter = cmark_iter_new(cur);
             while (cmark_iter_next(subIter) != CMARK_EVENT_DONE) {
                 cmark_node *subNode = cmark_iter_get_node(subIter);
-                if (cmark_node_get_type(subNode) == CMARK_NODE_TEXT || 
+                if (cmark_node_get_type(subNode) == CMARK_NODE_TEXT ||
                     cmark_node_get_type(subNode) == CMARK_NODE_CODE) {
                     const char *text = cmark_node_get_literal(subNode);
                     if (text) headingText += QString::fromUtf8(text);
                 }
             }
             cmark_iter_free(subIter);
-            
+
             if (headingText.isEmpty()) headingText = tr("(Empty Heading)");
+
+            qDebug() << "updateOutline: Heading text:" << headingText;
 
             QTreeWidgetItem *item = new QTreeWidgetItem();
             item->setText(0, headingText);
             item->setData(0, Qt::UserRole, startLine); // Store line number
-            
-            // Adjust parent stack
-            // If current level is > stack size, push last item
-            // If current level is <= stack size, pop until level matches
-            // Ideally: Level 1 -> Root
-            // Level 2 -> Child of last Level 1
-            
-            // Simple approach: Indent based on level relative to root
-            // But QTreeWidget expects explicit parent-child.
-            // Let's try to maintain a stack of "last item at level N"
-            
-            // Simplified: Just add as top level or child of the very last item if level > last level
-            // Correct approach: Maintain a stack where index `i` is the last item of level `i+1`
-            
-            // Reset stack if needed? No, standard recursive logic.
-            // Actually, since we are iterating linearly:
-            // We need to find the parent.
-            // Parent is the last item seen with level < current level.
-            
-            // Clean stack: remove items that are deeper or equal to current level
-            // But we stored specific items. 
-            // Let's use a map or list based logic.
-            
-            // Flat list approach with indentation is easier but less navigable.
-            // Tree approach:
-            
+
             // Ensure stack has enough capacity
             while (parents.size() <= level) parents.append(nullptr);
-            
+
             // Clear deeper levels
             while (parents.size() > level + 1) parents.removeLast();
-            
-            // Parent is at index `level - 1`?
-            // Level 1: parent is root (index 0 implies root?)
-            // Let's say stack[0] is root (nullptr).
-            // Level 1 item becomes stack[1].
-            // Level 2 item becomes stack[2] (child of stack[1]).
-            
+
+            // Parent is at index `level - 1`
             QTreeWidgetItem *parentItem = nullptr;
             if (level > 0 && level < parents.size()) {
                 parentItem = parents[level - 1];
             }
-            
+
             if (parentItem) {
                 parentItem->addChild(item);
             } else {
                 outlineTree->addTopLevelItem(item);
             }
-            
+
             // This item becomes the potential parent for level + 1
             if (parents.size() > level) {
                 parents[level] = item;
             } else {
                 parents.append(item);
             }
-            
+
             item->setExpanded(true);
         }
     }
+
+    qDebug() << "updateOutline: Total headings found:" << headingCount;
 
     cmark_iter_free(iter);
     cmark_node_free(doc);
