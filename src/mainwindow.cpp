@@ -296,10 +296,10 @@ void MainWindow::onTabChanged(int index)
 
 void MainWindow::closeTab(int index)
 {
-    if (index < 0) return;
-    
-    EditorTab &tab = editorTabs[index];
-    
+    if (index < 0 || index >= editorTabs.size()) return;
+
+    EditorTab tab = editorTabs[index];  // Copy, not reference
+
     // Check for unsaved changes
     if (tab.editor && tab.editor->document()->isModified()) {
         tabWidget->setCurrentIndex(index);
@@ -318,8 +318,10 @@ void MainWindow::closeTab(int index)
         }
     }
 
-    // Remove the tab
+    // Remove the tab from the list first
     editorTabs.removeAt(index);
+    
+    // Get the widget and remove the tab
     QWidget *widget = tabWidget->widget(index);
     tabWidget->removeTab(index);
     delete widget;
