@@ -539,6 +539,13 @@ void EditorWidget::checkSpelling()
 
 void EditorWidget::highlightMisspelledWords()
 {
+    bool wasModified = document()->isModified(); // Save state
+
+    // Block modificationChanged signal to prevent false "document modified" triggers
+    // This prevents the spell checker from triggering the asterisk after save
+    blockSignals(true);
+    document()->blockSignals(true);
+
     // --- Clear Previous Highlights ---
     QTextCursor clearCursor(document());
     clearCursor.select(QTextCursor::Document);
@@ -552,11 +559,6 @@ void EditorWidget::highlightMisspelledWords()
     misspelledFormat.setUnderlineColor(QColor(Qt::red)); // Standard red wavy underline
 
     // --- Find and Highlight Misspelled Words ---
-    // Use a regular expression to find word boundaries.
-    // \b ensures we match whole words.
-    // \w+ matches one or more word characters (letters, digits, underscore).
-    // This is a simple approach; a more sophisticated one might ignore
-    // Markdown syntax or numbers.
     QRegularExpression wordRegex(QStringLiteral("\\b(\\w+)\\b"));
     QString documentText = document()->toPlainText();
 
@@ -564,23 +566,22 @@ void EditorWidget::highlightMisspelledWords()
 
     while (matchIterator.hasNext()) {
         QRegularExpressionMatch match = matchIterator.next();
-        QString word = match.captured(1); // Captured group 1 is the word itself
+        QString word = match.captured(1);
 
-        // Check if the word is misspelled using our Hunspell wrapper
         if (spellChecker->isWordMisspelled(word)) {
-            // qDebug() << "Found misspelled word:" << word; // Uncomment for debugging
-
-            // Create a cursor to select and format this specific word
             QTextCursor wordCursor(document());
             int startPos = match.capturedStart(1);
             int length = match.capturedLength(1);
 
             wordCursor.setPosition(startPos);
             wordCursor.setPosition(startPos + length, QTextCursor::KeepAnchor);
-
-            // Apply the misspelled format
             wordCursor.mergeCharFormat(misspelledFormat);
         }
     }
-    // qDebug() << "Spell checking completed."; // Uncomment for debugging
+
+    // Restore signal blocking state
+    document()->blockSignals(false);
+    blockSignals(false);
+
+    document()->setModified(wasModified); // Restore state
 }
