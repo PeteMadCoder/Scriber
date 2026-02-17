@@ -18,6 +18,9 @@ class QDockWidget;
 class QTreeView;
 class QFileSystemModel;
 class QTimer; // Forward declaration
+class QTabWidget;
+class QTreeWidget;
+class QTreeWidgetItem;
 
 class MainWindow : public QMainWindow
 {
@@ -34,6 +37,8 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
+    void updateOutline();
+    void onOutlineItemClicked(QTreeWidgetItem *item, int column);
     void open();
     bool save();
     bool saveAs();
@@ -69,11 +74,14 @@ private:
 
     // Sidebar members
     QDockWidget *sidebarDock;
+    QTabWidget *sidebarTabs;
     QTreeView *fileTreeView;
+    QTreeWidget *outlineTree;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
     
     QTimer *wordCountTimer; // Debounce word count updates
+    QTimer *outlineTimer; // Debounce outline updates
 
     // Menu actions - Member objects
     QAction newAct;

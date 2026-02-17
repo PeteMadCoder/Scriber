@@ -32,6 +32,10 @@
 #include <QTreeView>
 #include <QFileSystemModel>
 #include <QHeaderView>
+#include <QTabWidget>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+#include <cmark.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -39,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
       findBarWidget(nullptr), findLineEdit(nullptr), findStatusLabel(nullptr),
       caseSensitiveCheckBox(nullptr), wholeWordsCheckBox(nullptr),
       findNextButton(nullptr), findPreviousButton(nullptr), closeFindBarButton(nullptr),
+      sidebarTabs(nullptr), outlineTree(nullptr), outlineTimer(nullptr),
 
       newAct(this), openAct(this), saveAct(this), saveAsAct(this),
       exportHtmlAct(this), exportPdfAct(this), exitAct(this),
@@ -60,8 +65,20 @@ MainWindow::MainWindow(QWidget *parent)
     connect(editor->document(), &QTextDocument::modificationChanged,
             this, &MainWindow::documentWasModified);
 
+    // Debounced outline update
+    outlineTimer = new QTimer(this);
+    outlineTimer->setSingleShot(true);
+    outlineTimer->setInterval(1000); // 1 second delay
+    connect(outlineTimer, &QTimer::timeout, this, &MainWindow::updateOutline);
+    connect(editor, &QPlainTextEdit::textChanged, [this]() {
+        outlineTimer->start();
+    });
+
     setCurrentFile(QString());
     statusBar()->showMessage(tr("Ready"));
+    
+    // Initial outline update
+    updateOutline();
 }
 
 MainWindow::~MainWindow()
@@ -445,11 +462,15 @@ void MainWindow::openFile(const QString &path)
 void MainWindow::createSidebar()
 {
     // Create the dock widget
-    sidebarDock = new QDockWidget(tr("Files"), this);
+    sidebarDock = new QDockWidget(tr("Sidebar"), this);
     sidebarDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     
-    // Create the tree view
-    fileTreeView = new QTreeView(sidebarDock);
+    // Create the tab widget
+    sidebarTabs = new QTabWidget(sidebarDock);
+    sidebarTabs->setTabPosition(QTabWidget::South); // Tabs at the bottom like VS Code
+
+    // --- Tab 1: File Explorer ---
+    fileTreeView = new QTreeView(sidebarTabs);
     fileSystemModel = new QFileSystemModel(this);
     
     // Initial path
@@ -460,7 +481,7 @@ void MainWindow::createSidebar()
     QStringList nameFilters;
     nameFilters << "*.md" << "*.markdown" << "*.txt";
     fileSystemModel->setNameFilters(nameFilters);
-    fileSystemModel->setNameFilterDisables(false); // Hide files that don't match
+    fileSystemModel->setNameFilterDisables(false); 
 
     fileTreeView->setModel(fileSystemModel);
     fileTreeView->setRootIndex(fileSystemModel->index(initialPath));
@@ -471,10 +492,6 @@ void MainWindow::createSidebar()
     fileTreeView->setColumnHidden(3, true); // Date Modified
     fileTreeView->header()->setVisible(false);
 
-    sidebarDock->setWidget(fileTreeView);
-    addDockWidget(Qt::LeftDockWidgetArea, sidebarDock);
-
-    // Connect double click to open file
     connect(fileTreeView, &QTreeView::doubleClicked, [this](const QModelIndex &index) {
         QString filePath = fileSystemModel->filePath(index);
         QFileInfo fileInfo(filePath);
@@ -486,11 +503,145 @@ void MainWindow::createSidebar()
             }
         }
     });
+
+    sidebarTabs->addTab(fileTreeView, tr("Files"));
+
+    // --- Tab 2: Outline ---
+    outlineTree = new QTreeWidget(sidebarTabs);
+    outlineTree->setHeaderHidden(true);
+    outlineTree->setColumnCount(1);
+    connect(outlineTree, &QTreeWidget::itemClicked, this, &MainWindow::onOutlineItemClicked);
+
+    sidebarTabs->addTab(outlineTree, tr("Outline"));
+
+    sidebarDock->setWidget(sidebarTabs);
+    addDockWidget(Qt::LeftDockWidgetArea, sidebarDock);
     
     // Create toggle action
     toggleSidebarAct = sidebarDock->toggleViewAction();
     toggleSidebarAct->setText(tr("&Sidebar"));
-    toggleSidebarAct->setStatusTip(tr("Show or hide the file sidebar"));
+    toggleSidebarAct->setStatusTip(tr("Show or hide the sidebar"));
+}
+
+void MainWindow::updateOutline()
+{
+    if (!outlineTree) return;
+
+    outlineTree->clear();
+    
+    QString markdown = editor->toPlainText();
+    QByteArray utf8 = markdown.toUtf8();
+    
+    // Parse document using cmark
+    cmark_node *doc = cmark_parse_document(utf8.constData(), utf8.size(), CMARK_OPT_DEFAULT);
+    if (!doc) return;
+
+    cmark_iter *iter = cmark_iter_new(doc);
+    cmark_event_type ev_type;
+    
+    QList<QTreeWidgetItem*> parents; // Stack for hierarchy
+    parents.append(nullptr); // Root level
+
+    while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+        cmark_node *cur = cmark_iter_get_node(iter);
+        
+        if (ev_type == CMARK_EVENT_ENTER && cmark_node_get_type(cur) == CMARK_NODE_HEADING) {
+            int level = cmark_node_get_heading_level(cur);
+            int startLine = cmark_node_get_start_line(cur);
+            
+            // Extract text content of the heading
+            QString headingText;
+            cmark_iter *subIter = cmark_iter_new(cur);
+            while (cmark_iter_next(subIter) != CMARK_EVENT_DONE) {
+                cmark_node *subNode = cmark_iter_get_node(subIter);
+                if (cmark_node_get_type(subNode) == CMARK_NODE_TEXT || 
+                    cmark_node_get_type(subNode) == CMARK_NODE_CODE) {
+                    const char *text = cmark_node_get_literal(subNode);
+                    if (text) headingText += QString::fromUtf8(text);
+                }
+            }
+            cmark_iter_free(subIter);
+            
+            if (headingText.isEmpty()) headingText = tr("(Empty Heading)");
+
+            QTreeWidgetItem *item = new QTreeWidgetItem();
+            item->setText(0, headingText);
+            item->setData(0, Qt::UserRole, startLine); // Store line number
+            
+            // Adjust parent stack
+            // If current level is > stack size, push last item
+            // If current level is <= stack size, pop until level matches
+            // Ideally: Level 1 -> Root
+            // Level 2 -> Child of last Level 1
+            
+            // Simple approach: Indent based on level relative to root
+            // But QTreeWidget expects explicit parent-child.
+            // Let's try to maintain a stack of "last item at level N"
+            
+            // Simplified: Just add as top level or child of the very last item if level > last level
+            // Correct approach: Maintain a stack where index `i` is the last item of level `i+1`
+            
+            // Reset stack if needed? No, standard recursive logic.
+            // Actually, since we are iterating linearly:
+            // We need to find the parent.
+            // Parent is the last item seen with level < current level.
+            
+            // Clean stack: remove items that are deeper or equal to current level
+            // But we stored specific items. 
+            // Let's use a map or list based logic.
+            
+            // Flat list approach with indentation is easier but less navigable.
+            // Tree approach:
+            
+            // Ensure stack has enough capacity
+            while (parents.size() <= level) parents.append(nullptr);
+            
+            // Clear deeper levels
+            while (parents.size() > level + 1) parents.removeLast();
+            
+            // Parent is at index `level - 1`?
+            // Level 1: parent is root (index 0 implies root?)
+            // Let's say stack[0] is root (nullptr).
+            // Level 1 item becomes stack[1].
+            // Level 2 item becomes stack[2] (child of stack[1]).
+            
+            QTreeWidgetItem *parentItem = nullptr;
+            if (level > 0 && level < parents.size()) {
+                parentItem = parents[level - 1];
+            }
+            
+            if (parentItem) {
+                parentItem->addChild(item);
+            } else {
+                outlineTree->addTopLevelItem(item);
+            }
+            
+            // This item becomes the potential parent for level + 1
+            if (parents.size() > level) {
+                parents[level] = item;
+            } else {
+                parents.append(item);
+            }
+            
+            item->setExpanded(true);
+        }
+    }
+
+    cmark_iter_free(iter);
+    cmark_node_free(doc);
+}
+
+void MainWindow::onOutlineItemClicked(QTreeWidgetItem *item, int column)
+{
+    int line = item->data(0, Qt::UserRole).toInt();
+    if (line > 0) {
+        QTextCursor cursor = editor->textCursor();
+        cursor.movePosition(QTextCursor::Start);
+        cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, line - 1);
+        editor->setTextCursor(cursor);
+        editor->centerCursor();
+        editor->setFocus();
+    }
 }
 
 void MainWindow::createFindBar()

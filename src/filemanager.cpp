@@ -20,7 +20,8 @@ FileManager::FileManager(QObject *parent) : QObject(parent)
 QString FileManager::convertMarkdownToHtml(const QString &markdown)
 {
     QByteArray utf8 = markdown.toUtf8();
-    char *html = cmark_markdown_to_html(utf8.constData(), utf8.size(), CMARK_OPT_DEFAULT);
+    int options = CMARK_OPT_DEFAULT | CMARK_OPT_SMART | CMARK_OPT_VALIDATE_UTF8; // Enable smart quotes and UTF-8 validation
+    char *html = cmark_markdown_to_html(utf8.constData(), utf8.size(), options);
     if (!html) {
         return QString();
     }
