@@ -95,8 +95,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    // Create initial empty tab
-    newFile();
+    // Don't create initial tab here - only create if no files are opened
+    // This allows command-line file opening to work without an extra empty tab
 
     statusBar()->showMessage(tr("Ready"));
     showMaximized();
@@ -117,7 +117,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     for (int i = editorTabs.size() - 1; i >= 0; --i) {
         const EditorTab &tab = editorTabs[i];
-        if (tab.editor && tab.editor->document()->isModified()) {
+        // Only warn if document is modified AND has content (not empty)
+        bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+        if (tab.editor && tab.editor->document()->isModified() && hasContent) {
             tabWidget->setCurrentIndex(i);
             const QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Scriber"),
                                    tr("The document has been modified.\n"
@@ -338,7 +340,9 @@ void MainWindow::closeTab(int index)
 
     EditorTab tab = editorTabs[index];
 
-    if (tab.editor && tab.editor->document()->isModified()) {
+    // Only warn if document is modified AND has content (not empty)
+    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    if (tab.editor && tab.editor->document()->isModified() && hasContent) {
         tabWidget->setCurrentIndex(index);
         QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Scriber"),
                                tr("The document has been modified.\n"
@@ -381,7 +385,9 @@ bool MainWindow::maybeSaveCurrentTab()
 
     const EditorTab &tab = editorTabs[currentIndex];
 
-    if (!tab.editor || !tab.editor->document()->isModified())
+    // Only warn if document is modified AND has content (not empty)
+    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    if (!tab.editor || !tab.editor->document()->isModified() || !hasContent)
         return true;
 
     const QMessageBox::StandardButton ret
@@ -407,7 +413,9 @@ bool MainWindow::maybeSave()
 
     const EditorTab &tab = editorTabs[currentIndex];
 
-    if (!tab.editor || !tab.editor->document()->isModified())
+    // Only warn if document is modified AND has content (not empty)
+    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    if (!tab.editor || !tab.editor->document()->isModified() || !hasContent)
         return true;
 
     const QMessageBox::StandardButton ret

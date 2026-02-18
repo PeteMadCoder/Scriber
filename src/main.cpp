@@ -38,8 +38,10 @@ int main(int argc, char *argv[])
         } else {
             qWarning() << "File does not exist:" << filePath;
         }
+    } else {
+        // No file specified, create an empty untitled document
+        window.newFile();
     }
-    // MainWindow constructor already creates an initial tab
 
     window.show();
     return app.exec();
