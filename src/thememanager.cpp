@@ -453,23 +453,21 @@ QString ThemeManager::buildStylesheet() const
 
         /* Radio Buttons */
         QRadioButton {
-            spacing: 8px;
+            spacing: 6px;
         }
         QRadioButton::indicator {
-            width: 14px;
-            height: 14px;
+            width: 10px;
+            height: 10px;
             border: 1px solid %10;
-            border-radius: 7px;
+            border-radius: 5px;
             background-color: %5;
         }
         QRadioButton::indicator:hover {
             border-color: %7;
         }
         QRadioButton::indicator:checked {
-            border: 1px solid %7;
+            border: 2px solid %7;
             background-color: %7;
-            /* Create the inner circle effect with a smaller transparent center */
-            padding: 3px;
         }
 
         /* Labels */

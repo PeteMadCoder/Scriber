@@ -38,7 +38,7 @@
     - Add "Go Up / Parent Directory" button.
     - Show current directory path.
     - Allow basic file management (create, delete, rename).
-- [ ] **Global Application Theming**:
+- [x] **Global Application Theming**:
     - Extend themes (Dark, Pitch Black) to style the entire application UI (menus, status bar, sidebar), not just the editor widget.
     - Replace "Toggle Theme" with a "Select Theme" menu or dialog for explicit choice.
 
