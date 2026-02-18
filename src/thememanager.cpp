@@ -317,6 +317,8 @@ QString ThemeManager::buildStylesheet() const
             color: %2;
             alternate-background-color: %5;
             show-decoration-selected: 1;
+            /* Ensure proper indentation for custom arrows */
+            indent: 20px;
         }
         QTreeView::item {
             padding: 4px;
@@ -335,14 +337,15 @@ QString ThemeManager::buildStylesheet() const
             color: %2;
             border: none;
         }
-        /* Arrow for branches with children - using border-based triangles */
+        /* Hide default branch indicators - we use custom drawing */
         QTreeView::branch:has-children:!has-siblings {
             border: none;
+            image: none;
         }
         QTreeView::branch:has-children:has-siblings {
             border: none;
+            image: none;
         }
-        /* Hide default indicators */
         QTreeView::branch:closed:has-children::indicator {
             border-image: none;
             image: none;
@@ -455,17 +458,17 @@ QString ThemeManager::buildStylesheet() const
             spacing: 6px;
         }
         QRadioButton::indicator {
-            width: 20px;
-            height: 20px;
-            border: 2px solid %10;
-            border-radius: 10px;
+            width: 16px;
+            height: 16px;
+            border: 1px solid %10;
+            border-radius: 8px;
             background-color: %5;
         }
         QRadioButton::indicator:hover {
             border-color: %7;
         }
         QRadioButton::indicator:checked {
-            border: 6px solid %7;
+            border: 4px solid %7;
             background-color: %5;
         }
 
@@ -511,12 +514,18 @@ QString ThemeManager::buildStylesheet() const
         /* Dialogs */
         QDialog {
             background-color: %1;
+            border: 2px solid %2;
+            border-radius: 8px;
         }
         QMessageBox {
             background-color: %1;
+            border: 2px solid %2;
+            border-radius: 8px;
         }
         QFileDialog {
             background-color: %1;
+            border: 2px solid %2;
+            border-radius: 8px;
         }
 
         /* Tool Tips */
