@@ -1,6 +1,7 @@
 #include "editorwidget.h"
 #include "markdownhighlighter.h"
 #include "spellchecker.h"
+#include "thememanager.h"
 #include <QFont>
 #include <QDir>
 #include <QFile>
@@ -32,6 +33,14 @@ EditorWidget::EditorWidget(QWidget *parent)
 
     MarkdownHighlighter* mdHighlighter = new MarkdownHighlighter(document());
     highlighter.reset(mdHighlighter);
+
+    // Apply initial theme from ThemeManager
+    ThemeManager *themeManager = ThemeManager::instance();
+    currentTheme = static_cast<Theme>(themeManager->currentTheme());
+    connect(themeManager, &ThemeManager::themeChanged, this, [this](ThemeManager::Theme theme) {
+        currentTheme = static_cast<Theme>(theme);
+        applyTheme();
+    });
 
     applyTheme();
 
@@ -92,74 +101,43 @@ EditorWidget::~EditorWidget()
 
 void EditorWidget::toggleTheme()
 {
+    // Delegate to ThemeManager for global theme cycling
+    ThemeManager *themeManager = ThemeManager::instance();
+    ThemeManager::Theme newTheme;
+    
+    // Cycle through themes
     if (currentTheme == Theme::Light) {
-        currentTheme = Theme::Dark;
+        newTheme = ThemeManager::Theme::Dark;
     } else if (currentTheme == Theme::Dark) {
-        currentTheme = Theme::PitchBlack;
+        newTheme = ThemeManager::Theme::PitchBlack;
     } else {
-        currentTheme = Theme::Light;
+        newTheme = ThemeManager::Theme::Light;
     }
     
-    applyTheme();
-    if (highlighter) {
-        MarkdownHighlighter::Theme hlTheme = MarkdownHighlighter::Theme::Light;
-        if (currentTheme == Theme::Dark) hlTheme = MarkdownHighlighter::Theme::Dark;
-        else if (currentTheme == Theme::PitchBlack) hlTheme = MarkdownHighlighter::Theme::PitchBlack;
-        
-        highlighter->setTheme(hlTheme);
-    }
+    themeManager->setTheme(newTheme);
 }
 
 void EditorWidget::applyTheme()
 {
-    QString themeFile;
-    if (currentTheme == Theme::Dark) {
-        themeFile = ":/resources/themes/dark.css";
-    } else if (currentTheme == Theme::PitchBlack) {
-        themeFile = ":/resources/themes/pitchblack.css";
-    } else {
-        themeFile = ":/resources/themes/light.css";
+    // Get colors from ThemeManager for consistency
+    ThemeManager *themeManager = ThemeManager::instance();
+    
+    // Apply background and text colors to the editor
+    QPalette p = palette();
+    p.setColor(QPalette::Base, themeManager->backgroundColor());
+    p.setColor(QPalette::Text, themeManager->textColor());
+    setPalette(p);
+    setAutoFillBackground(true);
+
+    // Update the highlighter with the new theme
+    if (highlighter) {
+        MarkdownHighlighter::Theme hlTheme = MarkdownHighlighter::Theme::Light;
+        if (currentTheme == Theme::Dark) hlTheme = MarkdownHighlighter::Theme::Dark;
+        else if (currentTheme == Theme::PitchBlack) hlTheme = MarkdownHighlighter::Theme::PitchBlack;
+
+        highlighter->setTheme(hlTheme);
     }
 
-    QFile file(themeFile);
-    QString styleSheet;
-    
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        styleSheet = in.readAll();
-        file.close();
-        setStyleSheet(styleSheet);
-        qDebug() << "Applied theme:" << themeFile;
-    } else {
-        qDebug() << "Could not open theme file:" << themeFile;
-        // Fallback to explicit palette
-        QPalette p = qApp->palette();
-        if (currentTheme == Theme::Dark) {
-            // DARK THEME FALLBACK
-            p.setColor(QPalette::Base, QColor(30, 30, 30));
-            p.setColor(QPalette::Text, QColor(225, 228, 232));
-            p.setColor(QPalette::Window, QColor(50, 50, 50));
-            p.setColor(QPalette::WindowText, QColor(240, 240, 240));
-        } else if (currentTheme == Theme::PitchBlack) {
-            // PITCH BLACK FALLBACK
-            p.setColor(QPalette::Base, Qt::black);
-            p.setColor(QPalette::Text, QColor(224, 224, 224));
-            p.setColor(QPalette::Window, Qt::black);
-            p.setColor(QPalette::WindowText, QColor(224, 224, 224));
-        } else {
-            // Light theme fallback
-            p.setColor(QPalette::Base, Qt::white);
-            p.setColor(QPalette::Text, Qt::black);
-            p.setColor(QPalette::Window, Qt::white);
-            p.setColor(QPalette::WindowText, Qt::black);
-            p.setColor(QPalette::Highlight, QColor(0, 120, 215));
-            p.setColor(QPalette::HighlightedText, Qt::white);
-        }
-        setPalette(p);
-        setAutoFillBackground(true);
-        qDebug() << "Using palette fallback for theme";
-    }
-    
     // Force re-highlighting to ensure new colors are applied
     if (highlighter) {
         highlighter->rehighlight();

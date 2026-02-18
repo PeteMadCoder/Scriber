@@ -55,7 +55,7 @@ private slots:
     bool saveAs();
     void exportToHtml();
     void exportToPdf();
-    void toggleTheme();
+    void selectTheme();
     void about();
     void find();
     void onFindNext();
@@ -109,7 +109,7 @@ private:
     QTreeWidget *outlineTree;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
-    
+
     // Enhanced file explorer widgets
     QWidget *fileExplorerWidget;
     QVBoxLayout *fileExplorerLayout;
@@ -137,7 +137,7 @@ private:
     QAction exportHtmlAct;
     QAction exportPdfAct;
     QAction exitAct;
-    QAction toggleThemeAct;
+    QAction selectThemeAct;
     QAction aboutAct;
     QAction findAct;
     QAction closeTabAct;

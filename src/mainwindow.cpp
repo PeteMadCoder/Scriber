@@ -3,6 +3,8 @@
 #include "editorwidget.h"
 #include "filemanager.h"
 #include "markdownhighlighter.h"
+#include "thememanager.h"
+#include "themedialog.h"
 #include <QTextEdit>
 #include <QMenuBar>
 #include <QMenu>
@@ -51,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
 
       newAct(this), openAct(this), saveAct(this), saveAsAct(this),
       exportHtmlAct(this), exportPdfAct(this), exitAct(this),
-      toggleThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this)
+      selectThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this)
 {
     fileManager = new FileManager(this);
 
@@ -290,12 +292,11 @@ void MainWindow::exportToPdf() {
     }
 }
 
-void MainWindow::toggleTheme() {
-    // Apply theme toggle to all editors
-    for (int i = 0; i < editorTabs.size(); ++i) {
-        if (editorTabs[i].editor) {
-            editorTabs[i].editor->toggleTheme();
-        }
+void MainWindow::selectTheme() {
+    ThemeDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Theme already applied via preview in dialog
+        // Just save the preference if needed
     }
 }
 
@@ -1239,9 +1240,9 @@ void MainWindow::createActions()
     exitAct.setStatusTip(tr("Exit the application"));
     connect(&exitAct, &QAction::triggered, this, &MainWindow::close);
 
-    toggleThemeAct.setText(tr("&Toggle Theme"));
-    toggleThemeAct.setStatusTip(tr("Switch between light and dark themes"));
-    connect(&toggleThemeAct, &QAction::triggered, this, &MainWindow::toggleTheme);
+    selectThemeAct.setText(tr("&Select Theme..."));
+    selectThemeAct.setStatusTip(tr("Choose application theme (Light, Dark, Pitch Black)"));
+    connect(&selectThemeAct, &QAction::triggered, this, &MainWindow::selectTheme);
 
     aboutAct.setText(tr("&About"));
     aboutAct.setStatusTip(tr("Show the application's About box"));
@@ -1280,7 +1281,7 @@ void MainWindow::createMenus()
     editMenu->addAction(&closeTabAct);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
-    viewMenu->addAction(&toggleThemeAct);
+    viewMenu->addAction(&selectThemeAct);
     viewMenu->addAction(toggleSidebarAct);
 
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));

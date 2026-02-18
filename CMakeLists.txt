@@ -33,6 +33,8 @@ qt_add_executable(scriber
     include/markdownhighlighter.h src/markdownhighlighter.cpp
     include/filemanager.h src/filemanager.cpp
     include/spellchecker.h src/spellchecker.cpp
+    include/thememanager.h src/thememanager.cpp
+    include/themedialog.h src/themedialog.cpp
     ${RESOURCE_CPP}
 )
 # --- END Create executable ---
