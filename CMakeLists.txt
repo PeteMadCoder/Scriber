@@ -35,6 +35,7 @@ qt_add_executable(scriber
     include/spellchecker.h src/spellchecker.cpp
     include/thememanager.h src/thememanager.cpp
     include/themedialog.h src/themedialog.cpp
+    include/outlinedelegate.h src/outlinedelegate.cpp
     ${RESOURCE_CPP}
 )
 # --- END Create executable ---

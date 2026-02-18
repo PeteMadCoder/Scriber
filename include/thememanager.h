@@ -45,6 +45,9 @@ public:
     // Apply theme to a specific widget and all its children
     void applyThemeToWidget(QWidget *widget);
 
+    // Get arrow icon for tree views (color-matched to current theme)
+    QIcon getArrowIcon(bool expanded) const;
+
 signals:
     void themeChanged(Theme theme);
 
@@ -57,6 +60,8 @@ private:
     ThemeManager& operator=(const ThemeManager&) = delete;
 
     void loadThemeColors();
+    void loadThemeFromSettings();
+    void saveThemeToSettings();
     void applyGlobalPalette();
     void applyApplicationStylesheet();
     QString buildStylesheet() const;

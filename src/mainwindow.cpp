@@ -5,6 +5,7 @@
 #include "markdownhighlighter.h"
 #include "thememanager.h"
 #include "themedialog.h"
+#include "outlinedelegate.h"
 #include <QTextEdit>
 #include <QMenuBar>
 #include <QMenu>
@@ -53,7 +54,8 @@ MainWindow::MainWindow(QWidget *parent)
 
       newAct(this), openAct(this), saveAct(this), saveAsAct(this),
       exportHtmlAct(this), exportPdfAct(this), exitAct(this),
-      selectThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this)
+      selectThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this),
+      outlineDelegate(nullptr)
 {
     fileManager = new FileManager(this);
 
@@ -691,6 +693,14 @@ void MainWindow::createSidebar()
     outlineTree->setHeaderHidden(true);
     outlineTree->setColumnCount(1);
     connect(outlineTree, &QTreeWidget::itemClicked, this, &MainWindow::onOutlineItemClicked);
+    
+    // Set up custom delegate for theme-aware arrow icons
+    outlineDelegate = new OutlineDelegate(outlineTree);
+    outlineTree->setItemDelegate(outlineDelegate);
+    
+    // Connect to theme changes to update arrow colors
+    connect(ThemeManager::instance(), &ThemeManager::themeChanged, this, &MainWindow::updateOutlineTreeStyle);
+    updateOutlineTreeStyle();
 
     sidebarTabs->addTab(outlineTree, tr("Outline"));
 
@@ -700,6 +710,18 @@ void MainWindow::createSidebar()
     toggleSidebarAct = sidebarDock->toggleViewAction();
     toggleSidebarAct->setText(tr("&Sidebar"));
     toggleSidebarAct->setStatusTip(tr("Show or hide the sidebar"));
+}
+
+void MainWindow::updateOutlineTreeStyle()
+{
+    if (!outlineDelegate || !outlineTree) return;
+    
+    // Get the current text color from the theme and use it for arrows
+    ThemeManager *themeManager = ThemeManager::instance();
+    outlineDelegate->setArrowColor(themeManager->textColor());
+    
+    // Force the tree to repaint
+    outlineTree->viewport()->update();
 }
 
 void MainWindow::updateOutline()

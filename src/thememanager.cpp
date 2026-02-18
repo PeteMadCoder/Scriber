@@ -16,6 +16,10 @@
 #include <QPlainTextEdit>
 #include <QLineEdit>
 #include <QScrollBar>
+#include <QStandardPaths>
+#include <QIcon>
+#include <QPixmap>
+#include <QPainter>
 
 ThemeManager* ThemeManager::s_instance = nullptr;
 
@@ -31,9 +35,38 @@ ThemeManager::ThemeManager(QObject *parent)
     : QObject(parent), m_currentTheme(Theme::Dark)
 {
     loadThemeColors();
-    m_currentColors = m_darkColors;
+    loadThemeFromSettings();
     applyGlobalPalette();
     applyApplicationStylesheet();
+}
+
+void ThemeManager::loadThemeFromSettings()
+{
+    QSettings settings;
+    int themeValue = settings.value("theme/theme", static_cast<int>(Theme::Dark)).toInt();
+    
+    // Validate theme value
+    if (themeValue < static_cast<int>(Theme::Light) || 
+        themeValue > static_cast<int>(Theme::PitchBlack)) {
+        themeValue = static_cast<int>(Theme::Dark);
+    }
+    
+    m_currentTheme = static_cast<Theme>(themeValue);
+    
+    if (m_currentTheme == Theme::Dark) {
+        m_currentColors = m_darkColors;
+    } else if (m_currentTheme == Theme::PitchBlack) {
+        m_currentColors = m_pitchBlackColors;
+    } else {
+        m_currentColors = m_lightColors;
+    }
+}
+
+void ThemeManager::saveThemeToSettings()
+{
+    QSettings settings;
+    settings.setValue("theme/theme", static_cast<int>(m_currentTheme));
+    settings.sync();
 }
 
 void ThemeManager::setTheme(Theme theme)
@@ -54,6 +87,9 @@ void ThemeManager::setTheme(Theme theme)
 
     applyGlobalPalette();
     applyApplicationStylesheet();
+
+    // Save to settings
+    saveThemeToSettings();
 
     // Notify all listeners
     emit themeChanged(theme);
@@ -278,9 +314,14 @@ QString ThemeManager::buildStylesheet() const
             background-color: %5;
             border: none;
             outline: none;
+            color: %2;
+            alternate-background-color: %5;
+            show-decoration-selected: 1;
         }
         QTreeView::item {
             padding: 4px;
+            color: %2;
+            border: none;
         }
         QTreeView::item:hover {
             background-color: %7;
@@ -291,6 +332,28 @@ QString ThemeManager::buildStylesheet() const
         }
         QTreeView::branch {
             background-color: %5;
+            color: %2;
+            border: none;
+        }
+        /* Arrow for branches with children - using border-based triangles */
+        QTreeView::branch:has-children:!has-siblings {
+            border: none;
+        }
+        QTreeView::branch:has-children:has-siblings {
+            border: none;
+        }
+        /* Hide default indicators */
+        QTreeView::branch:closed:has-children::indicator {
+            border-image: none;
+            image: none;
+        }
+        QTreeView::branch:open:has-children::indicator {
+            border-image: none;
+            image: none;
+        }
+        QTreeView::branch:!has-children {
+            border: none;
+            image: none;
         }
 
         /* Scroll Bars */
@@ -373,15 +436,37 @@ QString ThemeManager::buildStylesheet() const
             spacing: 6px;
         }
         QCheckBox::indicator {
-            width: 16px;
-            height: 16px;
-            border: 1px solid %10;
-            border-radius: 3px;
+            width: 18px;
+            height: 18px;
+            border: 2px solid %10;
+            border-radius: 4px;
             background-color: %5;
+        }
+        QCheckBox::indicator:hover {
+            border-color: %7;
         }
         QCheckBox::indicator:checked {
             background-color: %7;
             border-color: %7;
+        }
+
+        /* Radio Buttons */
+        QRadioButton {
+            spacing: 6px;
+        }
+        QRadioButton::indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid %10;
+            border-radius: 10px;
+            background-color: %5;
+        }
+        QRadioButton::indicator:hover {
+            border-color: %7;
+        }
+        QRadioButton::indicator:checked {
+            border: 6px solid %7;
+            background-color: %5;
         }
 
         /* Labels */
@@ -527,4 +612,33 @@ QColor ThemeManager::highlightedTextColor() const
 QColor ThemeManager::borderColor() const
 {
     return m_currentColors.border;
+}
+
+QIcon ThemeManager::getArrowIcon(bool expanded) const
+{
+    const int size = 16;
+    const QColor arrowColor = m_currentColors.text;
+    
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+    
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(arrowColor);
+    painter.setBrush(arrowColor);
+    
+    if (expanded) {
+        // Down-pointing arrow (expanded state)
+        QPolygon arrow;
+        arrow << QPoint(4, 6) << QPoint(12, 6) << QPoint(8, 11);
+        painter.drawPolygon(arrow);
+    } else {
+        // Right-pointing arrow (collapsed state)
+        QPolygon arrow;
+        arrow << QPoint(5, 4) << QPoint(5, 12) << QPoint(10, 8);
+        painter.drawPolygon(arrow);
+    }
+    
+    painter.end();
+    return QIcon(pixmap);
 }

@@ -25,6 +25,7 @@ class QTreeWidgetItem;
 class QVBoxLayout;
 class QHBoxLayout;
 class QMenu;
+class OutlineDelegate;
 
 // Structure to track editor and file path per tab
 struct EditorTab {
@@ -95,6 +96,7 @@ private:
     void updateActionsState();
 
     void updateWordCount();
+    void updateOutlineTreeStyle();
     QLabel *wordCountLabel;
     QLabel *charCountLabel;
 
@@ -109,6 +111,7 @@ private:
     QTreeWidget *outlineTree;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
+    OutlineDelegate *outlineDelegate;
 
     // Enhanced file explorer widgets
     QWidget *fileExplorerWidget;
