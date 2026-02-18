@@ -72,19 +72,26 @@ void SidebarFileExplorer::createWidgets()
     fileTreeView = new QTreeView();
     fileSystemModel = new QFileSystemModel(this);
     
+    // Set root path FIRST before setting the model index
+    QString initialPath = QDir::currentPath();
+    fileSystemModel->setRootPath(initialPath);
     fileSystemModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
-    
+
     QStringList nameFilters;
     nameFilters << "*.md" << "*.markdown" << "*.txt";
     fileSystemModel->setNameFilters(nameFilters);
     fileSystemModel->setNameFilterDisables(false);
-    
+
     fileTreeView->setModel(fileSystemModel);
+    fileTreeView->setRootIndex(fileSystemModel->index(initialPath));
     fileTreeView->setColumnHidden(1, true);
     fileTreeView->setColumnHidden(2, true);
     fileTreeView->setColumnHidden(3, true);
     fileTreeView->header()->setVisible(false);
     
+    // Set initial path in path edit
+    pathEdit->setText(initialPath);
+
     // VS Code-style features
     fileTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     fileTreeView->setDragEnabled(true);
@@ -93,6 +100,9 @@ void SidebarFileExplorer::createWidgets()
     fileTreeView->setDragDropMode(QAbstractItemView::DragDrop);
     fileTreeView->setDefaultDropAction(Qt::MoveAction);
     
+    // Enable context menu
+    fileTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+
     mainLayout->addWidget(fileTreeView);
     
     // Inline rename editor (hidden by default)
