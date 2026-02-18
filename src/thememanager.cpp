@@ -317,8 +317,6 @@ QString ThemeManager::buildStylesheet() const
             color: %2;
             alternate-background-color: %5;
             show-decoration-selected: 1;
-            /* Ensure proper indentation for custom arrows */
-            indent: 20px;
         }
         QTreeView::item {
             padding: 4px;
@@ -455,21 +453,23 @@ QString ThemeManager::buildStylesheet() const
 
         /* Radio Buttons */
         QRadioButton {
-            spacing: 6px;
+            spacing: 8px;
         }
         QRadioButton::indicator {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 1px solid %10;
-            border-radius: 8px;
+            border-radius: 7px;
             background-color: %5;
         }
         QRadioButton::indicator:hover {
             border-color: %7;
         }
         QRadioButton::indicator:checked {
-            border: 4px solid %7;
-            background-color: %5;
+            border: 1px solid %7;
+            background-color: %7;
+            /* Create the inner circle effect with a smaller transparent center */
+            padding: 3px;
         }
 
         /* Labels */

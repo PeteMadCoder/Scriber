@@ -23,8 +23,7 @@ void OutlineDelegate::drawBranchIndicator(QPainter *painter, const QStyleOptionV
     if (index.model()->hasChildren(index)) {
         bool expanded = view->isExpanded(index);
 
-        // Get the indentation to position the arrow correctly
-        int indent = view->indentation();
+        // Calculate the level of this item
         int level = 0;
         QModelIndex parent = index.parent();
         while (parent.isValid()) {
@@ -32,13 +31,12 @@ void OutlineDelegate::drawBranchIndicator(QPainter *painter, const QStyleOptionV
             parent = parent.parent();
         }
         
-        // Position: start of item rect minus indentation for branch area, plus small offset
-        int x = option.rect.left() - (indent * level) - indent + 6;
+        // The branch indicator area is to the left of the item rect
+        // Position based on level: each level shifts by indentation amount
+        int indent = view->indentation();
+        int x = 4 + (level * indent);  // Start at 4px from left, plus indentation for each level
         int y = option.rect.center().y();
         int halfArrowSize = 4;
-
-        // Ensure x is at a reasonable position
-        if (x < 2) x = 6;
 
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
