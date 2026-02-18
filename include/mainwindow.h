@@ -4,29 +4,24 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QLabel>
-#include <QMap>
-#include <QDir>
-#include <QModelIndex>
+#include <QTabWidget>
+#include <QList>
 
 class EditorWidget;
 class FileManager;
 class QString;
 class QAction;
-class QLineEdit;
-class QLabel;
-class QCheckBox;
-class QPushButton;
-class QWidget;
+class QMenu;
 class QDockWidget;
-class QTreeView;
-class QFileSystemModel;
 class QTimer;
-class QTabWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
 class QVBoxLayout;
-class QHBoxLayout;
-class QMenu;
+
+class FindBarWidget;
+class DocumentOutlineWidget;
+class SidebarFileExplorer;
+class ToastNotification;
 class OutlineDelegate;
 
 // Structure to track editor and file path per tab
@@ -43,6 +38,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    
     void openFile(const QString &path = QString());
     void newFile();
 
@@ -51,127 +47,78 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
-    void updateOutline();
-    void onOutlineItemClicked(QTreeWidgetItem *item, int column);
+    // Tab management
+    void onTabChanged(int index);
+    void closeTab(int index);
+    void documentWasModified();
+    
+    // File operations
     void open();
     bool save();
     bool saveAs();
     void exportToHtml();
     void exportToPdf();
+    
+    // UI
     void selectTheme();
     void about();
     void find();
-    void onFindNext();
-    void onFindPrevious();
-    void onFindTextEdited();
-    void hideFindBar();
-    void documentWasModified();
-    void onTabChanged(int index);
-    void closeTab(int index);
+    bool isFindBarVisible() const;
     
-    // Enhanced sidebar slots
-    void onParentDirectoryClicked();
-    void onPathEdited(const QString &path);
-    void onRefreshClicked();
-    void onFileTreeContextMenu(const QPoint &pos);
-    void onNewFile();
-    void onNewFolder();
-    void onRename();
-    void onDelete();
-    void onRefresh();
-    void onDirectoryChanged(const QString &path);
+    // Outline
+    void updateOutline();
     
-    // VS Code-style file management
-    void startRenameEditor(const QModelIndex &index);
-    void finishRenameEditor();
-    void cancelRenameEditor();
-    void onDeleteToTrash();
-    void onDeletePermanently();
-    void onCutFile();
-    void onCopyFile();
-    void onPasteFile();
-    void onDuplicateFile();
-    void onRevealInFileManager();
-    void onOpenContainingFolder();
-    void onSelectionChanged();
-    void onFileTreeDoubleClicked(const QModelIndex &index);
-    
-    // Toast notifications
-    void showToast(const QString &message, int durationMs = 3000);
+    // Word count
+    void updateWordCount();
 
 private:
+    // Initialization
     void createActions();
     void createMenus();
     void createStatusBar();
+    void createSidebar();
     void loadSettings();
     void saveSettings();
-    bool maybeSave();
-    bool maybeSaveCurrentTab();
-    void setCurrentFile(const QString &fileName);
-    void createFindBar();
-    void createSidebar();
+    
+    // Tab management
     void openFileInNewTab(const QString &fileName);
     void updateTabTitle(int index);
     void updateWindowTitle();
     void updateActionsState();
-
-    void updateWordCount();
-    void updateOutlineTreeStyle();
-    bool copyDirectory(const QDir &source, const QDir &destination);
-    QLabel *wordCountLabel;
-    QLabel *charCountLabel;
-
+    bool maybeSave();
+    bool maybeSaveCurrentTab();
+    void setCurrentFile(const QString &fileName);
+    
+    // UI components
+    void setupEditorConnections(EditorWidget *editor);
+    
+    // Members
     QTabWidget *tabWidget;
     QList<EditorTab> editorTabs;
     QPointer<FileManager> fileManager;
-
-    // Sidebar members
+    
+    // Sidebar
     QDockWidget *sidebarDock;
     QTabWidget *sidebarTabs;
-    QTreeView *fileTreeView;
-    QTreeWidget *outlineTree;
-    QFileSystemModel *fileSystemModel;
+    SidebarFileExplorer *fileExplorer;
+    DocumentOutlineWidget *outlineWidget;
     QAction *toggleSidebarAct;
     OutlineDelegate *outlineDelegate;
-
-    // Enhanced file explorer widgets
-    QWidget *fileExplorerWidget;
-    QVBoxLayout *fileExplorerLayout;
-    QHBoxLayout *fileNavLayout;
-    QPushButton *parentDirButton;
-    QLineEdit *currentPathEdit;
-    QPushButton *refreshButton;
-    QMenu *fileContextMenu;
     
-    // File management actions
-    QAction *newFileAct;
-    QAction *newFolderAct;
-    QAction *renameAct;
-    QAction *deleteAct;
-    QAction *refreshAct;
+    // Find bar
+    FindBarWidget *findBarWidget;
     
-    // VS Code-style file operations
-    QAction *cutFileAct;
-    QAction *copyFileAct;
-    QAction *pasteFileAct;
-    QAction *duplicateFileAct;
-    QAction *revealInFileManagerAct;
-    QAction *openContainingFolderAct;
+    // Toast notification
+    ToastNotification *toast;
     
-    // Inline rename editor
-    QLineEdit *inlineRenameEditor;
-    QModelIndex renameEditorIndex;
+    // Status bar
+    QLabel *wordCountLabel;
+    QLabel *charCountLabel;
     
-    // Clipboard for file operations (cut/copy/paste)
-    struct FileClipboard {
-        QStringList paths;
-        bool isCut;
-    };
-    FileClipboard fileClipboard;
-
+    // Timers
     QTimer *wordCountTimer;
     QTimer *outlineTimer;
-
+    
     // Menu actions
     QAction newAct;
     QAction openAct;
@@ -184,19 +131,4 @@ private:
     QAction aboutAct;
     QAction findAct;
     QAction closeTabAct;
-
-    // Find bar members
-    bool isFindBarVisible;
-    QWidget *findBarWidget;
-    QLineEdit *findLineEdit;
-    QLabel *findStatusLabel;
-    QCheckBox *caseSensitiveCheckBox;
-    QCheckBox *wholeWordsCheckBox;
-    QPushButton *findNextButton;
-    QPushButton *findPreviousButton;
-    QPushButton *closeFindBarButton;
-    
-    // Toast notification
-    QLabel *toastLabel;
-    QTimer *toastTimer;
 };

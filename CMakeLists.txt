@@ -36,6 +36,10 @@ qt_add_executable(scriber
     include/thememanager.h src/thememanager.cpp
     include/themedialog.h src/themedialog.cpp
     include/outlinedelegate.h src/outlinedelegate.cpp
+    include/findbarwidget.h src/findbarwidget.cpp
+    include/documentoutlinewidget.h src/documentoutlinewidget.cpp
+    include/sidebarfileexplorer.h src/sidebarfileexplorer.cpp
+    include/toastnotification.h src/toastnotification.cpp
     ${RESOURCE_CPP}
 )
 # --- END Create executable ---
