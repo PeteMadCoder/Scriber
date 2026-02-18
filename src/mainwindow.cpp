@@ -33,6 +33,7 @@
 #include <QTabWidget>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QInputDialog>
 #include <cmark.h>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -42,6 +43,11 @@ MainWindow::MainWindow(QWidget *parent)
       caseSensitiveCheckBox(nullptr), wholeWordsCheckBox(nullptr),
       findNextButton(nullptr), findPreviousButton(nullptr), closeFindBarButton(nullptr),
       sidebarTabs(nullptr), outlineTree(nullptr), outlineTimer(nullptr),
+      fileExplorerWidget(nullptr), fileExplorerLayout(nullptr), fileNavLayout(nullptr),
+      parentDirButton(nullptr), currentPathEdit(nullptr), refreshButton(nullptr),
+      fileContextMenu(nullptr),
+      newFileAct(nullptr), newFolderAct(nullptr), renameAct(nullptr),
+      deleteAct(nullptr), refreshAct(nullptr),
 
       newAct(this), openAct(this), saveAct(this), saveAsAct(this),
       exportHtmlAct(this), exportPdfAct(this), exitAct(this),
@@ -483,7 +489,7 @@ void MainWindow::updateActionsState()
 }
 
 void MainWindow::createStatusBar() {
-    // Sidebar toggle button
+    // Sidebar toggle button - positioned on the left side of the status bar
     QPushButton *sidebarToggleBtn = new QPushButton(this);
     sidebarToggleBtn->setCheckable(true);
     sidebarToggleBtn->setFlat(true);
@@ -565,7 +571,55 @@ void MainWindow::createSidebar()
     sidebarTabs->setTabPosition(QTabWidget::South);
 
     // --- Tab 1: File Explorer ---
-    fileTreeView = new QTreeView(sidebarTabs);
+    fileExplorerWidget = new QWidget(sidebarTabs);
+    fileExplorerLayout = new QVBoxLayout(fileExplorerWidget);
+    fileExplorerLayout->setContentsMargins(0, 0, 0, 0);
+    fileExplorerLayout->setSpacing(0);
+
+    // Navigation toolbar
+    fileNavLayout = new QHBoxLayout();
+    fileNavLayout->setSpacing(2);
+
+    // Parent directory button
+    parentDirButton = new QPushButton();
+    parentDirButton->setFixedSize(28, 28);
+    parentDirButton->setToolTip(tr("Go to Parent Directory (Backspace)"));
+    QIcon parentIcon = QIcon::fromTheme("go-up", QIcon::fromTheme("folder-open"));
+    if (!parentIcon.isNull()) {
+        parentDirButton->setIcon(parentIcon);
+    } else {
+        parentDirButton->setText("↑");
+    }
+    connect(parentDirButton, &QPushButton::clicked, this, &MainWindow::onParentDirectoryClicked);
+    fileNavLayout->addWidget(parentDirButton);
+
+    // Current path display
+    currentPathEdit = new QLineEdit();
+    currentPathEdit->setReadOnly(true);
+    currentPathEdit->setPlaceholderText(tr("Current directory"));
+    connect(currentPathEdit, &QLineEdit::editingFinished, [this]() {
+        currentPathEdit->setReadOnly(true);
+        onPathEdited(currentPathEdit->text());
+    });
+    fileNavLayout->addWidget(currentPathEdit);
+
+    // Refresh button
+    refreshButton = new QPushButton();
+    refreshButton->setFixedSize(28, 28);
+    refreshButton->setToolTip(tr("Refresh (F5)"));
+    QIcon refreshIcon = QIcon::fromTheme("view-refresh", QIcon::fromTheme("reload"));
+    if (!refreshIcon.isNull()) {
+        refreshButton->setIcon(refreshIcon);
+    } else {
+        refreshButton->setText("⟳");
+    }
+    connect(refreshButton, &QPushButton::clicked, this, &MainWindow::onRefreshClicked);
+    fileNavLayout->addWidget(refreshButton);
+
+    fileExplorerLayout->addLayout(fileNavLayout);
+
+    // File tree view
+    fileTreeView = new QTreeView(fileExplorerWidget);
     fileSystemModel = new QFileSystemModel(this);
 
     QString initialPath = QDir::currentPath();
@@ -585,15 +639,51 @@ void MainWindow::createSidebar()
     fileTreeView->setColumnHidden(3, true);
     fileTreeView->header()->setVisible(false);
 
+    // Set initial path
+    currentPathEdit->setText(initialPath);
+
+    // Double-click to open files
     connect(fileTreeView, &QTreeView::doubleClicked, [this](const QModelIndex &index) {
         QString filePath = fileSystemModel->filePath(index);
         QFileInfo fileInfo(filePath);
-        if (fileInfo.isFile()) {
+        if (fileInfo.isDir()) {
+            fileTreeView->setRootIndex(index);
+            currentPathEdit->setText(filePath);
+        } else {
             openFileInNewTab(filePath);
         }
     });
 
-    sidebarTabs->addTab(fileTreeView, tr("Files"));
+    // Context menu for file operations
+    fileTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(fileTreeView, &QTreeView::customContextMenuRequested,
+            this, &MainWindow::onFileTreeContextMenu);
+
+    fileExplorerLayout->addWidget(fileTreeView);
+    sidebarTabs->addTab(fileExplorerWidget, tr("Files"));
+
+    // Create context menu
+    fileContextMenu = new QMenu(fileTreeView);
+    newFileAct = new QAction(tr("New File"), fileContextMenu);
+    newFileAct->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_N));
+    connect(newFileAct, &QAction::triggered, this, &MainWindow::onNewFile);
+
+    newFolderAct = new QAction(tr("New Folder"), fileContextMenu);
+    newFolderAct->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    connect(newFolderAct, &QAction::triggered, this, &MainWindow::onNewFolder);
+
+    renameAct = new QAction(tr("Rename"), fileContextMenu);
+    renameAct->setShortcut(QKeySequence(Qt::Key_F2));
+    connect(renameAct, &QAction::triggered, this, &MainWindow::onRename);
+
+    deleteAct = new QAction(tr("Delete"), fileContextMenu);
+    deleteAct->setShortcut(QKeySequence(Qt::Key_Delete));
+    connect(deleteAct, &QAction::triggered, this, &MainWindow::onDelete);
+
+    fileContextMenu->addSeparator();
+    refreshAct = new QAction(tr("Refresh"), fileContextMenu);
+    refreshAct->setShortcut(QKeySequence(Qt::Key_F5));
+    connect(refreshAct, &QAction::triggered, this, &MainWindow::onRefresh);
 
     // --- Tab 2: Outline ---
     outlineTree = new QTreeWidget(sidebarTabs);
@@ -692,10 +782,10 @@ void MainWindow::onOutlineItemClicked(QTreeWidgetItem *item, int column)
 {
     int currentIndex = tabWidget->currentIndex();
     if (currentIndex < 0 || currentIndex >= editorTabs.size()) return;
-    
+
     EditorWidget *currentEditor = editorTabs[currentIndex].editor;
     if (!currentEditor) return;
-    
+
     int line = item->data(0, Qt::UserRole).toInt();
     if (line > 0) {
         QTextCursor cursor = currentEditor->textCursor();
@@ -705,6 +795,222 @@ void MainWindow::onOutlineItemClicked(QTreeWidgetItem *item, int column)
         currentEditor->centerCursor();
         currentEditor->setFocus();
     }
+}
+
+// ============================================================================
+// Enhanced Sidebar Methods
+// ============================================================================
+
+void MainWindow::onParentDirectoryClicked()
+{
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    if (currentIndex.isValid()) {
+        QModelIndex parentIndex = currentIndex.parent();
+        if (parentIndex.isValid()) {
+            fileTreeView->setRootIndex(parentIndex);
+        } else {
+            // Already at root, try to go to parent directory
+            QString currentPath = fileSystemModel->filePath(currentIndex);
+            QFileInfo fi(currentPath);
+            QString parentPath = fi.absolutePath();
+            if (parentPath != currentPath) {
+                QModelIndex parentIdx = fileSystemModel->index(parentPath);
+                if (parentIdx.isValid()) {
+                    fileTreeView->setRootIndex(parentIdx);
+                }
+            }
+        }
+    }
+}
+
+void MainWindow::onPathEdited(const QString &path)
+{
+    QFileInfo fi(path);
+    if (fi.exists() && fi.isDir()) {
+        QModelIndex index = fileSystemModel->index(path);
+        if (index.isValid()) {
+            fileTreeView->setRootIndex(index);
+        }
+    } else {
+        // Invalid path, revert to current
+        QModelIndex currentIndex = fileTreeView->rootIndex();
+        if (currentIndex.isValid()) {
+            currentPathEdit->setText(fileSystemModel->filePath(currentIndex));
+        } else {
+            currentPathEdit->setText(fileSystemModel->rootPath());
+        }
+    }
+}
+
+void MainWindow::onRefreshClicked()
+{
+    onRefresh();
+}
+
+void MainWindow::onRefresh()
+{
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    if (currentIndex.isValid()) {
+        fileSystemModel->setRootPath(fileSystemModel->filePath(currentIndex));
+        fileTreeView->setRootIndex(currentIndex);
+    } else {
+        QString rootPath = fileSystemModel->rootPath();
+        fileSystemModel->setRootPath(rootPath);
+        fileTreeView->setRootIndex(fileSystemModel->index(rootPath));
+    }
+}
+
+void MainWindow::onFileTreeContextMenu(const QPoint &pos)
+{
+    QModelIndex index = fileTreeView->indexAt(pos);
+    
+    // Determine which actions to show based on selection
+    bool hasSelection = index.isValid();
+    
+    renameAct->setEnabled(hasSelection);
+    deleteAct->setEnabled(hasSelection);
+    
+    // Show context menu
+    fileContextMenu->exec(fileTreeView->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::onNewFile()
+{
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    QString dirPath;
+    
+    if (currentIndex.isValid()) {
+        dirPath = fileSystemModel->filePath(currentIndex);
+    } else {
+        dirPath = fileSystemModel->rootPath();
+    }
+    
+    // Create a new file with a default name
+    QString baseName = "untitled.md";
+    QString filePath = QDir(dirPath).filePath(baseName);
+    
+    // Ensure unique filename
+    int counter = 1;
+    while (QFile::exists(filePath)) {
+        baseName = QString("untitled%1.md").arg(counter++);
+        filePath = QDir(dirPath).filePath(baseName);
+    }
+    
+    // Create the file
+    QFile file(filePath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        file.close();
+        
+        // Refresh the view
+        onRefresh();
+        
+        // Open the new file in editor
+        openFileInNewTab(filePath);
+    } else {
+        QMessageBox::warning(this, tr("Error"),
+                            tr("Could not create file: %1").arg(file.errorString()));
+    }
+}
+
+void MainWindow::onNewFolder()
+{
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    QString dirPath;
+    
+    if (currentIndex.isValid()) {
+        dirPath = fileSystemModel->filePath(currentIndex);
+    } else {
+        dirPath = fileSystemModel->rootPath();
+    }
+    
+    // Create a new folder with a default name
+    QString baseName = "New Folder";
+    QString folderPath = QDir(dirPath).filePath(baseName);
+    
+    // Ensure unique folder name
+    int counter = 1;
+    while (QDir(folderPath).exists()) {
+        baseName = QString("New Folder %1").arg(counter++);
+        folderPath = QDir(dirPath).filePath(baseName);
+    }
+    
+    // Create the directory
+    if (QDir().mkdir(folderPath)) {
+        // Refresh the view
+        onRefresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"),
+                            tr("Could not create folder: %1").arg(folderPath));
+    }
+}
+
+void MainWindow::onRename()
+{
+    QModelIndex index = fileTreeView->currentIndex();
+    if (!index.isValid()) return;
+    
+    QString oldPath = fileSystemModel->filePath(index);
+    QFileInfo fi(oldPath);
+    
+    // Show input dialog for new name
+    bool ok;
+    QString newName = QInputDialog::getText(this, tr("Rename"),
+                                            tr("Enter new name:"),
+                                            QLineEdit::Normal,
+                                            fi.fileName(), &ok);
+    
+    if (ok && !newName.isEmpty() && newName != fi.fileName()) {
+        QString newPath = QDir(fi.absolutePath()).filePath(newName);
+        
+        if (QFile::rename(oldPath, newPath)) {
+            onRefresh();
+        } else {
+            QMessageBox::warning(this, tr("Error"),
+                                tr("Could not rename file/folder."));
+        }
+    }
+}
+
+void MainWindow::onDelete()
+{
+    QModelIndex index = fileTreeView->currentIndex();
+    if (!index.isValid()) return;
+    
+    QString path = fileSystemModel->filePath(index);
+    QFileInfo fi(path);
+    
+    // Confirm deletion
+    QString itemType = fi.isDir() ? tr("folder") : tr("file");
+    QMessageBox::StandardButton ret = QMessageBox::warning(
+        this, tr("Confirm Delete"),
+        tr("Are you sure you want to delete the %1 \"%2\"?\n"
+           "This action cannot be undone.").arg(itemType, fi.fileName()),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) return;
+    
+    bool success = false;
+    if (fi.isDir()) {
+        // Remove directory and its contents
+        QDir dir(path);
+        success = dir.removeRecursively();
+    } else {
+        // Remove file
+        success = QFile::remove(path);
+    }
+    
+    if (!success) {
+        QMessageBox::warning(this, tr("Error"),
+                            tr("Could not delete %1").arg(fi.fileName()));
+    } else {
+        onRefresh();
+    }
+}
+
+void MainWindow::onDirectoryChanged(const QString &path)
+{
+    // This slot can be used to track directory changes if needed
+    Q_UNUSED(path);
 }
 
 void MainWindow::createFindBar()
@@ -1052,7 +1358,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     }
-    
+
     // Handle Ctrl+Shift+Tab for previous tab
     if (event->modifiers() == (Qt::ControlModifier | Qt::ShiftModifier) && event->key() == Qt::Key_Tab) {
         int currentIndex = tabWidget->currentIndex();
@@ -1061,13 +1367,27 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     }
-    
+
     // Handle Escape to close find bar
     if (event->key() == Qt::Key_Escape && isFindBarVisible) {
         hideFindBar();
         event->accept();
         return;
     }
-    
+
+    // Handle Backspace for parent directory (when sidebar has focus)
+    if (event->key() == Qt::Key_Backspace && fileTreeView && fileTreeView->hasFocus()) {
+        onParentDirectoryClicked();
+        event->accept();
+        return;
+    }
+
+    // Handle F5 for refresh (when sidebar has focus)
+    if (event->key() == Qt::Key_F5 && fileTreeView && fileTreeView->hasFocus()) {
+        onRefreshClicked();
+        event->accept();
+        return;
+    }
+
     QMainWindow::keyPressEvent(event);
 }

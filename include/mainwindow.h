@@ -22,6 +22,9 @@ class QTimer;
 class QTabWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QVBoxLayout;
+class QHBoxLayout;
+class QMenu;
 
 // Structure to track editor and file path per tab
 struct EditorTab {
@@ -62,6 +65,18 @@ private slots:
     void documentWasModified();
     void onTabChanged(int index);
     void closeTab(int index);
+    
+    // Enhanced sidebar slots
+    void onParentDirectoryClicked();
+    void onPathEdited(const QString &path);
+    void onRefreshClicked();
+    void onFileTreeContextMenu(const QPoint &pos);
+    void onNewFile();
+    void onNewFolder();
+    void onRename();
+    void onDelete();
+    void onRefresh();
+    void onDirectoryChanged(const QString &path);
 
 private:
     void createActions();
@@ -94,6 +109,22 @@ private:
     QTreeWidget *outlineTree;
     QFileSystemModel *fileSystemModel;
     QAction *toggleSidebarAct;
+    
+    // Enhanced file explorer widgets
+    QWidget *fileExplorerWidget;
+    QVBoxLayout *fileExplorerLayout;
+    QHBoxLayout *fileNavLayout;
+    QPushButton *parentDirButton;
+    QLineEdit *currentPathEdit;
+    QPushButton *refreshButton;
+    QMenu *fileContextMenu;
+    
+    // File management actions
+    QAction *newFileAct;
+    QAction *newFolderAct;
+    QAction *renameAct;
+    QAction *deleteAct;
+    QAction *refreshAct;
 
     QTimer *wordCountTimer;
     QTimer *outlineTimer;
