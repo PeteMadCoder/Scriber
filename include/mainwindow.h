@@ -5,6 +5,8 @@
 #include <QPointer>
 #include <QLabel>
 #include <QMap>
+#include <QDir>
+#include <QModelIndex>
 
 class EditorWidget;
 class FileManager;
@@ -78,6 +80,24 @@ private slots:
     void onDelete();
     void onRefresh();
     void onDirectoryChanged(const QString &path);
+    
+    // VS Code-style file management
+    void startRenameEditor(const QModelIndex &index);
+    void finishRenameEditor();
+    void cancelRenameEditor();
+    void onDeleteToTrash();
+    void onDeletePermanently();
+    void onCutFile();
+    void onCopyFile();
+    void onPasteFile();
+    void onDuplicateFile();
+    void onRevealInFileManager();
+    void onOpenContainingFolder();
+    void onSelectionChanged();
+    void onFileTreeDoubleClicked(const QModelIndex &index);
+    
+    // Toast notifications
+    void showToast(const QString &message, int durationMs = 3000);
 
 private:
     void createActions();
@@ -97,6 +117,7 @@ private:
 
     void updateWordCount();
     void updateOutlineTreeStyle();
+    bool copyDirectory(const QDir &source, const QDir &destination);
     QLabel *wordCountLabel;
     QLabel *charCountLabel;
 
@@ -128,6 +149,25 @@ private:
     QAction *renameAct;
     QAction *deleteAct;
     QAction *refreshAct;
+    
+    // VS Code-style file operations
+    QAction *cutFileAct;
+    QAction *copyFileAct;
+    QAction *pasteFileAct;
+    QAction *duplicateFileAct;
+    QAction *revealInFileManagerAct;
+    QAction *openContainingFolderAct;
+    
+    // Inline rename editor
+    QLineEdit *inlineRenameEditor;
+    QModelIndex renameEditorIndex;
+    
+    // Clipboard for file operations (cut/copy/paste)
+    struct FileClipboard {
+        QStringList paths;
+        bool isCut;
+    };
+    FileClipboard fileClipboard;
 
     QTimer *wordCountTimer;
     QTimer *outlineTimer;
@@ -155,4 +195,8 @@ private:
     QPushButton *findNextButton;
     QPushButton *findPreviousButton;
     QPushButton *closeFindBarButton;
+    
+    // Toast notification
+    QLabel *toastLabel;
+    QTimer *toastTimer;
 };

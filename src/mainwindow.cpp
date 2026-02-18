@@ -37,6 +37,13 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QInputDialog>
+#include <QModelIndex>
+#include <QMimeData>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QStorageInfo>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
 #include <cmark.h>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -51,11 +58,10 @@ MainWindow::MainWindow(QWidget *parent)
       fileContextMenu(nullptr),
       newFileAct(nullptr), newFolderAct(nullptr), renameAct(nullptr),
       deleteAct(nullptr), refreshAct(nullptr),
-
-      newAct(this), openAct(this), saveAct(this), saveAsAct(this),
-      exportHtmlAct(this), exportPdfAct(this), exitAct(this),
-      selectThemeAct(this), aboutAct(this), findAct(this), closeTabAct(this),
-      outlineDelegate(nullptr)
+      cutFileAct(nullptr), copyFileAct(nullptr), pasteFileAct(nullptr),
+      duplicateFileAct(nullptr), revealInFileManagerAct(nullptr),
+      openContainingFolderAct(nullptr),
+      inlineRenameEditor(nullptr), toastLabel(nullptr), toastTimer(nullptr)
 {
     fileManager = new FileManager(this);
 
@@ -74,6 +80,13 @@ MainWindow::MainWindow(QWidget *parent)
     outlineTimer->setInterval(1000);
     connect(outlineTimer, &QTimer::timeout, this, &MainWindow::updateOutline);
 
+    // Initialize toast timer
+    toastTimer = new QTimer(this);
+    toastTimer->setSingleShot(true);
+    connect(toastTimer, &QTimer::timeout, [this]() {
+        if (toastLabel) toastLabel->hide();
+    });
+
     // Create initial empty tab
     newFile();
 
@@ -82,6 +95,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
 
     statusBar()->showMessage(tr("Ready"));
+
+    // Show window maximized
+    showMaximized();
 }
 
 MainWindow::~MainWindow()
@@ -519,6 +535,20 @@ void MainWindow::createStatusBar() {
     statusBar()->addPermanentWidget(wordCountLabel);
     statusBar()->addPermanentWidget(charCountLabel);
 
+    // Toast notification label (overlay on status bar)
+    toastLabel = new QLabel(statusBar());
+    toastLabel->setStyleSheet(
+        "QLabel { "
+        "  background-color: #333333; "
+        "  color: #ffffff; "
+        "  padding: 8px 16px; "
+        "  border-radius: 4px; "
+        "  font-weight: bold;"
+        "}"
+    );
+    toastLabel->hide();
+    toastLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+
     wordCountTimer = new QTimer(this);
     wordCountTimer->setSingleShot(true);
     wordCountTimer->setInterval(1000);
@@ -642,51 +672,135 @@ void MainWindow::createSidebar()
     fileTreeView->setColumnHidden(3, true);
     fileTreeView->header()->setVisible(false);
 
+    // VS Code-style features
+    fileTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);  // Multi-select
+    fileTreeView->setDragEnabled(true);
+    fileTreeView->setAcceptDrops(true);
+    fileTreeView->setDropIndicatorShown(true);
+    fileTreeView->setDragDropMode(QAbstractItemView::DragDrop);
+    fileTreeView->setDefaultDropAction(Qt::MoveAction);
+
     // Set initial path
     currentPathEdit->setText(initialPath);
 
     // Double-click to open files
-    connect(fileTreeView, &QTreeView::doubleClicked, [this](const QModelIndex &index) {
-        QString filePath = fileSystemModel->filePath(index);
-        QFileInfo fileInfo(filePath);
-        if (fileInfo.isDir()) {
-            fileTreeView->setRootIndex(index);
-            currentPathEdit->setText(filePath);
-        } else {
-            openFileInNewTab(filePath);
-        }
-    });
+    connect(fileTreeView, &QTreeView::doubleClicked, this, &MainWindow::onFileTreeDoubleClicked);
 
     // Context menu for file operations
     fileTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(fileTreeView, &QTreeView::customContextMenuRequested,
             this, &MainWindow::onFileTreeContextMenu);
+    
+    // Selection changed signal for multi-select operations
+    connect(fileTreeView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::onSelectionChanged);
 
     fileExplorerLayout->addWidget(fileTreeView);
     sidebarTabs->addTab(fileExplorerWidget, tr("Files"));
 
-    // Create context menu
+    // Create inline rename editor (hidden by default)
+    inlineRenameEditor = new QLineEdit(fileTreeView);
+    inlineRenameEditor->hide();
+    inlineRenameEditor->setFrame(false);
+    inlineRenameEditor->setStyleSheet(
+        "QLineEdit { "
+        "  background-color: #ffffff; "
+        "  border: 2px solid #007fd4; "
+        "  padding: 2px 4px; "
+        "  font-weight: bold;"
+        "}"
+    );
+    connect(inlineRenameEditor, &QLineEdit::editingFinished, this, &MainWindow::finishRenameEditor);
+    connect(inlineRenameEditor, &QLineEdit::returnPressed, this, &MainWindow::finishRenameEditor);
+
+    // Create context menu with VS Code-style organization
     fileContextMenu = new QMenu(fileTreeView);
+    
+    // New File/Folder section
     newFileAct = new QAction(tr("New File"), fileContextMenu);
+    newFileAct->setIcon(QIcon::fromTheme("document-new", QIcon::fromTheme("text-x-generic")));
     newFileAct->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_N));
     connect(newFileAct, &QAction::triggered, this, &MainWindow::onNewFile);
 
     newFolderAct = new QAction(tr("New Folder"), fileContextMenu);
+    newFolderAct->setIcon(QIcon::fromTheme("folder-new", QIcon::fromTheme("folder")));
     newFolderAct->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     connect(newFolderAct, &QAction::triggered, this, &MainWindow::onNewFolder);
 
+    fileContextMenu->addAction(newFileAct);
+    fileContextMenu->addAction(newFolderAct);
+    fileContextMenu->addSeparator();
+
+    // Clipboard operations section
+    cutFileAct = new QAction(tr("Cut"), fileContextMenu);
+    cutFileAct->setIcon(QIcon::fromTheme("edit-cut"));
+    cutFileAct->setShortcut(QKeySequence::Cut);
+    connect(cutFileAct, &QAction::triggered, this, &MainWindow::onCutFile);
+
+    copyFileAct = new QAction(tr("Copy"), fileContextMenu);
+    copyFileAct->setIcon(QIcon::fromTheme("edit-copy"));
+    copyFileAct->setShortcut(QKeySequence::Copy);
+    connect(copyFileAct, &QAction::triggered, this, &MainWindow::onCopyFile);
+
+    pasteFileAct = new QAction(tr("Paste"), fileContextMenu);
+    pasteFileAct->setIcon(QIcon::fromTheme("edit-paste"));
+    pasteFileAct->setShortcut(QKeySequence::Paste);
+    connect(pasteFileAct, &QAction::triggered, this, &MainWindow::onPasteFile);
+
+    duplicateFileAct = new QAction(tr("Duplicate"), fileContextMenu);
+    duplicateFileAct->setIcon(QIcon::fromTheme("edit-copy"));
+    duplicateFileAct->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
+    connect(duplicateFileAct, &QAction::triggered, this, &MainWindow::onDuplicateFile);
+
+    fileContextMenu->addAction(cutFileAct);
+    fileContextMenu->addAction(copyFileAct);
+    fileContextMenu->addAction(pasteFileAct);
+    fileContextMenu->addAction(duplicateFileAct);
+    fileContextMenu->addSeparator();
+
+    // File operations section
     renameAct = new QAction(tr("Rename"), fileContextMenu);
+    renameAct->setIcon(QIcon::fromTheme("edit-rename"));
     renameAct->setShortcut(QKeySequence(Qt::Key_F2));
-    connect(renameAct, &QAction::triggered, this, &MainWindow::onRename);
+    connect(renameAct, &QAction::triggered, [this]() {
+        QModelIndex index = fileTreeView->currentIndex();
+        if (index.isValid()) startRenameEditor(index);
+    });
 
     deleteAct = new QAction(tr("Delete"), fileContextMenu);
-    deleteAct->setShortcut(QKeySequence(Qt::Key_Delete));
-    connect(deleteAct, &QAction::triggered, this, &MainWindow::onDelete);
+    deleteAct->setIcon(QIcon::fromTheme("edit-delete"));
+    deleteAct->setShortcut(QKeySequence::Delete);
+    connect(deleteAct, &QAction::triggered, this, &MainWindow::onDeleteToTrash);
 
+    fileContextMenu->addAction(renameAct);
+    fileContextMenu->addAction(deleteAct);
     fileContextMenu->addSeparator();
+
+    // Reveal/Open containing folder section
+    revealInFileManagerAct = new QAction(tr("Reveal in File Manager"), fileContextMenu);
+    revealInFileManagerAct->setIcon(QIcon::fromTheme("system-file-manager"));
+#ifdef Q_OS_WIN
+    revealInFileManagerAct->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_R));
+#else
+    revealInFileManagerAct->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+#endif
+    connect(revealInFileManagerAct, &QAction::triggered, this, &MainWindow::onRevealInFileManager);
+
+    openContainingFolderAct = new QAction(tr("Open Containing Folder"), fileContextMenu);
+    openContainingFolderAct->setIcon(QIcon::fromTheme("folder-open"));
+    connect(openContainingFolderAct, &QAction::triggered, this, &MainWindow::onOpenContainingFolder);
+
+    fileContextMenu->addAction(revealInFileManagerAct);
+    fileContextMenu->addAction(openContainingFolderAct);
+    fileContextMenu->addSeparator();
+
+    // Refresh
     refreshAct = new QAction(tr("Refresh"), fileContextMenu);
+    refreshAct->setIcon(QIcon::fromTheme("view-refresh"));
     refreshAct->setShortcut(QKeySequence(Qt::Key_F5));
     connect(refreshAct, &QAction::triggered, this, &MainWindow::onRefresh);
+
+    fileContextMenu->addAction(refreshAct);
 
     // --- Tab 2: Outline ---
     outlineTree = new QTreeWidget(sidebarTabs);
@@ -887,12 +1001,14 @@ void MainWindow::onFileTreeContextMenu(const QPoint &pos)
 {
     QModelIndex index = fileTreeView->indexAt(pos);
     
-    // Determine which actions to show based on selection
-    bool hasSelection = index.isValid();
+    // Select the item under cursor if not already selected
+    if (index.isValid() && !fileTreeView->selectionModel()->isSelected(index)) {
+        fileTreeView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
+    }
     
-    renameAct->setEnabled(hasSelection);
-    deleteAct->setEnabled(hasSelection);
-    
+    // Update actions based on current selection
+    onSelectionChanged();
+
     // Show context menu
     fileContextMenu->exec(fileTreeView->viewport()->mapToGlobal(pos));
 }
@@ -1034,6 +1150,433 @@ void MainWindow::onDirectoryChanged(const QString &path)
 {
     // This slot can be used to track directory changes if needed
     Q_UNUSED(path);
+}
+
+// ============================================================================
+// VS Code-Style File Management Methods
+// ============================================================================
+
+void MainWindow::onFileTreeDoubleClicked(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+    
+    QString filePath = fileSystemModel->filePath(index);
+    QFileInfo fileInfo(filePath);
+    if (fileInfo.isDir()) {
+        fileTreeView->setRootIndex(index);
+        currentPathEdit->setText(filePath);
+    } else {
+        openFileInNewTab(filePath);
+    }
+}
+
+void MainWindow::onSelectionChanged()
+{
+    // Update context menu actions based on selection
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    int selectedCount = selectedIndices.size();
+    
+    // Enable/disable actions based on selection
+    renameAct->setEnabled(selectedCount == 1);
+    deleteAct->setEnabled(selectedCount > 0);
+    cutFileAct->setEnabled(selectedCount > 0);
+    copyFileAct->setEnabled(selectedCount > 0);
+    duplicateFileAct->setEnabled(selectedCount == 1);
+    revealInFileManagerAct->setEnabled(selectedCount == 1);
+    openContainingFolderAct->setEnabled(selectedCount > 0);
+    
+    // Paste is enabled if we have something in clipboard
+    pasteFileAct->setEnabled(!fileClipboard.paths.isEmpty());
+}
+
+void MainWindow::startRenameEditor(const QModelIndex &index)
+{
+    if (!index.isValid() || !inlineRenameEditor) return;
+    
+    renameEditorIndex = index;
+    QString oldPath = fileSystemModel->filePath(index);
+    QFileInfo fi(oldPath);
+    
+    // Get the visual rectangle for the item
+    QRect rect = fileTreeView->visualRect(index);
+    if (!rect.isValid()) return;
+    
+    // Position the editor over the item
+    inlineRenameEditor->setGeometry(rect);
+    inlineRenameEditor->setText(fi.fileName());
+    inlineRenameEditor->selectAll();
+    inlineRenameEditor->show();
+    inlineRenameEditor->setFocus();
+}
+
+void MainWindow::finishRenameEditor()
+{
+    if (!inlineRenameEditor || !inlineRenameEditor->isVisible() || !renameEditorIndex.isValid()) return;
+    
+    QString newName = inlineRenameEditor->text().trimmed();
+    inlineRenameEditor->hide();
+    
+    if (newName.isEmpty()) {
+        cancelRenameEditor();
+        return;
+    }
+    
+    QString oldPath = fileSystemModel->filePath(renameEditorIndex);
+    QFileInfo fi(oldPath);
+    
+    if (newName == fi.fileName()) {
+        // Name didn't change
+        renameEditorIndex = QModelIndex();
+        return;
+    }
+    
+    QString newPath = QDir(fi.absolutePath()).filePath(newName);
+    
+    if (QFile::rename(oldPath, newPath)) {
+        showToast(tr("Renamed to \"%1\"").arg(newName));
+        onRefresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"),
+                            tr("Could not rename file/folder to \"%1\"").arg(newName));
+    }
+    
+    renameEditorIndex = QModelIndex();
+}
+
+void MainWindow::cancelRenameEditor()
+{
+    if (inlineRenameEditor) {
+        inlineRenameEditor->hide();
+    }
+    renameEditorIndex = QModelIndex();
+}
+
+void MainWindow::onDeleteToTrash()
+{
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    if (selectedIndices.isEmpty()) return;
+    
+    // Collect all paths to delete
+    QStringList pathsToDelete;
+    for (const QModelIndex &index : selectedIndices) {
+        if (index.isValid()) {
+            pathsToDelete << fileSystemModel->filePath(index);
+        }
+    }
+    
+    if (pathsToDelete.isEmpty()) return;
+    
+    // Confirm deletion
+    int fileCount = 0;
+    int dirCount = 0;
+    for (const QString &path : pathsToDelete) {
+        QFileInfo fi(path);
+        if (fi.isDir()) dirCount++;
+        else fileCount++;
+    }
+    
+    QString message;
+    if (fileCount > 0 && dirCount > 0) {
+        message = tr("Are you sure you want to delete %1 file(s) and %2 folder(s)?\nThis will move them to trash.").arg(fileCount).arg(dirCount);
+    } else if (dirCount > 0) {
+        message = tr("Are you sure you want to delete %1 folder(s)?\nThis will move them to trash.").arg(dirCount);
+    } else {
+        message = tr("Are you sure you want to delete %1 file(s)?\nThis will move them to trash.").arg(fileCount);
+    }
+    
+    QMessageBox::StandardButton ret = QMessageBox::warning(
+        this, tr("Confirm Delete"),
+        message,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) return;
+    
+    // Delete files/folders
+    int successCount = 0;
+    for (const QString &path : pathsToDelete) {
+        QFileInfo fi(path);
+        bool success = false;
+        
+        if (fi.isDir()) {
+            QDir dir(path);
+            success = dir.removeRecursively();
+        } else {
+            success = QFile::remove(path);
+        }
+        
+        if (success) successCount++;
+    }
+    
+    if (successCount > 0) {
+        showToast(tr("Deleted %1 item(s)").arg(successCount));
+        onRefresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"), tr("Could not delete items"));
+    }
+}
+
+void MainWindow::onDeletePermanently()
+{
+    // For Shift+Delete - permanent deletion (more dangerous)
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    if (selectedIndices.isEmpty()) return;
+    
+    // Collect all paths to delete
+    QStringList pathsToDelete;
+    for (const QModelIndex &index : selectedIndices) {
+        if (index.isValid()) {
+            pathsToDelete << fileSystemModel->filePath(index);
+        }
+    }
+    
+    if (pathsToDelete.isEmpty()) return;
+    
+    // Stronger warning for permanent deletion
+    QMessageBox::StandardButton ret = QMessageBox::warning(
+        this, tr("Permanently Delete"),
+        tr("Are you sure you want to PERMANENTLY delete these items?\nThis action cannot be undone!"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) return;
+    
+    // Delete files/folders
+    int successCount = 0;
+    for (const QString &path : pathsToDelete) {
+        QFileInfo fi(path);
+        bool success = false;
+        
+        if (fi.isDir()) {
+            QDir dir(path);
+            success = dir.removeRecursively();
+        } else {
+            success = QFile::remove(path);
+        }
+        
+        if (success) successCount++;
+    }
+    
+    if (successCount > 0) {
+        showToast(tr("Permanently deleted %1 item(s)").arg(successCount));
+        onRefresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"), tr("Could not delete items"));
+    }
+}
+
+void MainWindow::onCutFile()
+{
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    if (selectedIndices.isEmpty()) return;
+    
+    fileClipboard.paths.clear();
+    for (const QModelIndex &index : selectedIndices) {
+        if (index.isValid()) {
+            fileClipboard.paths << fileSystemModel->filePath(index);
+        }
+    }
+    fileClipboard.isCut = true;
+    
+    showToast(tr("Cut %1 file(s)").arg(fileClipboard.paths.size()));
+}
+
+void MainWindow::onCopyFile()
+{
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    if (selectedIndices.isEmpty()) return;
+    
+    fileClipboard.paths.clear();
+    for (const QModelIndex &index : selectedIndices) {
+        if (index.isValid()) {
+            fileClipboard.paths << fileSystemModel->filePath(index);
+        }
+    }
+    fileClipboard.isCut = false;
+    
+    showToast(tr("Copied %1 file(s)").arg(fileClipboard.paths.size()));
+}
+
+void MainWindow::onPasteFile()
+{
+    if (fileClipboard.paths.isEmpty()) return;
+    
+    // Get destination directory
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    QString destDirPath;
+    if (currentIndex.isValid()) {
+        destDirPath = fileSystemModel->filePath(currentIndex);
+    } else {
+        destDirPath = fileSystemModel->rootPath();
+    }
+    
+    int pasteCount = 0;
+    for (const QString &sourcePath : fileClipboard.paths) {
+        QFileInfo fi(sourcePath);
+        QString destPath = QDir(destDirPath).filePath(fi.fileName());
+        
+        // Ensure unique filename if already exists
+        int counter = 1;
+        while (QFile::exists(destPath)) {
+            QString baseName = fi.baseName();
+            QString suffix = fi.suffix();
+            if (fi.isDir()) {
+                destPath = QDir(destDirPath).filePath(QString("%1 %2").arg(fi.fileName()).arg(counter++));
+            } else {
+                destPath = QDir(destDirPath).filePath(QString("%1 %2.%3").arg(baseName).arg(counter++).arg(suffix));
+            }
+        }
+        
+        bool success = false;
+        if (fileClipboard.isCut) {
+            // Move operation
+            success = QFile::rename(sourcePath, destPath);
+        } else {
+            // Copy operation
+            if (fi.isDir()) {
+                QDir sourceDir(sourcePath);
+                QDir destDir(destPath);
+                success = copyDirectory(sourceDir, destDir);
+            } else {
+                success = QFile::copy(sourcePath, destPath);
+            }
+        }
+        
+        if (success) pasteCount++;
+    }
+    
+    if (pasteCount > 0) {
+        showToast(tr("Pasted %1 item(s)").arg(pasteCount));
+        onRefresh();
+        
+        // Clear clipboard if it was a cut operation
+        if (fileClipboard.isCut) {
+            fileClipboard.paths.clear();
+            fileClipboard.isCut = false;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Error"), tr("Could not paste items"));
+    }
+}
+
+bool MainWindow::copyDirectory(const QDir &source, const QDir &destination)
+{
+    if (!destination.exists()) {
+        if (!destination.mkpath(".")) return false;
+    }
+    
+    QStringList files = source.entryList(QDir::Files | QDir::NoDotAndDotDot);
+    for (const QString &file : files) {
+        if (!QFile::copy(source.filePath(file), destination.filePath(file))) {
+            return false;
+        }
+    }
+    
+    QStringList dirs = source.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &dir : dirs) {
+        QDir sourceSubDir(source.filePath(dir));
+        QDir destinationSubDir(destination.filePath(dir));
+        if (!copyDirectory(sourceSubDir, destinationSubDir)) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+void MainWindow::onDuplicateFile()
+{
+    QModelIndex index = fileTreeView->currentIndex();
+    if (!index.isValid()) return;
+    
+    QString sourcePath = fileSystemModel->filePath(index);
+    QFileInfo fi(sourcePath);
+    
+    // Create duplicate name
+    QString baseName = fi.baseName();
+    QString suffix = fi.suffix();
+    QString destPath;
+    int counter = 1;
+    
+    do {
+        if (fi.isDir()) {
+            destPath = QDir(fi.absolutePath()).filePath(QString("%1 (copy %2)").arg(fi.fileName()).arg(counter++));
+        } else {
+            destPath = QDir(fi.absolutePath()).filePath(QString("%1 (copy %2).%3").arg(baseName).arg(counter++).arg(suffix));
+        }
+    } while (QFile::exists(destPath));
+    
+    bool success = false;
+    if (fi.isDir()) {
+        QDir sourceDir(sourcePath);
+        QDir destDir(destPath);
+        success = copyDirectory(sourceDir, destDir);
+    } else {
+        success = QFile::copy(sourcePath, destPath);
+    }
+    
+    if (success) {
+        showToast(tr("Duplicated \"%1\"").arg(fi.fileName()));
+        onRefresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"), tr("Could not duplicate item"));
+    }
+}
+
+void MainWindow::onRevealInFileManager()
+{
+    QModelIndex index = fileTreeView->currentIndex();
+    if (!index.isValid()) return;
+    
+    QString path = fileSystemModel->filePath(index);
+    QFileInfo fi(path);
+    
+    // Open the containing folder and select the file
+    QDesktopServices::openUrl(QUrl::fromLocalFile(fi.isDir() ? path : fi.absolutePath()));
+}
+
+void MainWindow::onOpenContainingFolder()
+{
+    QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
+    if (selectedIndices.isEmpty()) return;
+    
+    // Just open the current directory in file manager
+    QModelIndex currentIndex = fileTreeView->rootIndex();
+    QString dirPath;
+    if (currentIndex.isValid()) {
+        dirPath = fileSystemModel->filePath(currentIndex);
+    } else {
+        dirPath = fileSystemModel->rootPath();
+    }
+    
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+}
+
+void MainWindow::showToast(const QString &message, int durationMs)
+{
+    if (!toastLabel) return;
+    
+    toastLabel->setText(message);
+    toastLabel->adjustSize();
+    
+    // Position the toast at the bottom center of the window
+    int x = (width() - toastLabel->width()) / 2;
+    int y = height() - toastLabel->height() - 50;  // 50px from bottom
+    toastLabel->move(x, y);
+    
+    toastLabel->show();
+    toastLabel->raise();
+    
+    // Fade in animation
+    QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(toastLabel);
+    toastLabel->setGraphicsEffect(effect);
+    QPropertyAnimation *fadeIn = new QPropertyAnimation(effect, "opacity");
+    fadeIn->setDuration(300);
+    fadeIn->setStartValue(0.0);
+    fadeIn->setEndValue(1.0);
+    fadeIn->start();
+    
+    // Auto-hide after duration
+    toastTimer->setInterval(durationMs);
+    toastTimer->start();
 }
 
 void MainWindow::createFindBar()
@@ -1397,6 +1940,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     }
+    
+    // Handle Escape to cancel inline rename
+    if (event->key() == Qt::Key_Escape && inlineRenameEditor && inlineRenameEditor->isVisible()) {
+        cancelRenameEditor();
+        event->accept();
+        return;
+    }
 
     // Handle Backspace for parent directory (when sidebar has focus)
     if (event->key() == Qt::Key_Backspace && fileTreeView && fileTreeView->hasFocus()) {
@@ -1410,6 +1960,56 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         onRefreshClicked();
         event->accept();
         return;
+    }
+    
+    // Handle F2 for rename (when sidebar has focus)
+    if (event->key() == Qt::Key_F2 && fileTreeView && fileTreeView->hasFocus()) {
+        QModelIndex index = fileTreeView->currentIndex();
+        if (index.isValid()) {
+            startRenameEditor(index);
+        }
+        event->accept();
+        return;
+    }
+    
+    // Handle Delete for delete (when sidebar has focus)
+    if (event->key() == Qt::Key_Delete && fileTreeView && fileTreeView->hasFocus()) {
+        if (event->modifiers() == Qt::ShiftModifier) {
+            // Shift+Delete = permanent delete
+            onDeletePermanently();
+        } else {
+            // Regular delete = move to trash
+            onDeleteToTrash();
+        }
+        event->accept();
+        return;
+    }
+    
+    // Handle Ctrl+D for duplicate (when sidebar has focus)
+    if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_D && 
+        fileTreeView && fileTreeView->hasFocus()) {
+        onDuplicateFile();
+        event->accept();
+        return;
+    }
+    
+    // Handle Ctrl+C/X/V for clipboard operations (when sidebar has focus)
+    if (fileTreeView && fileTreeView->hasFocus()) {
+        if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_C) {
+            onCopyFile();
+            event->accept();
+            return;
+        }
+        if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_X) {
+            onCutFile();
+            event->accept();
+            return;
+        }
+        if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_V) {
+            onPasteFile();
+            event->accept();
+            return;
+        }
     }
 
     QMainWindow::keyPressEvent(event);
