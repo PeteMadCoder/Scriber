@@ -44,6 +44,7 @@
 #include <QStorageInfo>
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
+#include <QSet>
 #include <cmark.h>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -1173,8 +1174,12 @@ void MainWindow::onFileTreeDoubleClicked(const QModelIndex &index)
 void MainWindow::onSelectionChanged()
 {
     // Update context menu actions based on selection
+    // Only count first column indexes to avoid duplicates from multi-column model
     QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
-    int selectedCount = selectedIndices.size();
+    int selectedCount = 0;
+    for (const QModelIndex &index : selectedIndices) {
+        if (index.column() == 0) selectedCount++;
+    }
     
     // Enable/disable actions based on selection
     renameAct->setEnabled(selectedCount == 1);
@@ -1201,10 +1206,32 @@ void MainWindow::startRenameEditor(const QModelIndex &index)
     QRect rect = fileTreeView->visualRect(index);
     if (!rect.isValid()) return;
     
+    // Get theme colors for the rename editor styling
+    ThemeManager *themeManager = ThemeManager::instance();
+    QColor bgColor = themeManager->backgroundColor();
+    QColor textColor = themeManager->textColor();
+    QColor highlightColor = themeManager->highlightColor();
+    
     // Position the editor over the item
     inlineRenameEditor->setGeometry(rect);
     inlineRenameEditor->setText(fi.fileName());
     inlineRenameEditor->selectAll();
+    
+    // Theme-aware stylesheet
+    inlineRenameEditor->setStyleSheet(
+        QString(
+            "QLineEdit { "
+            "  background-color: %1; "
+            "  color: %2; "
+            "  border: 2px solid %3; "
+            "  padding: 2px 4px; "
+            "  font-weight: bold;"
+            "  selection-background-color: %3;"
+            "  selection-color: %1;"
+            "}"
+        ).arg(bgColor.name()).arg(textColor.name()).arg(highlightColor.name())
+    );
+    
     inlineRenameEditor->show();
     inlineRenameEditor->setFocus();
 }
@@ -1256,14 +1283,15 @@ void MainWindow::onDeleteToTrash()
     QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
     if (selectedIndices.isEmpty()) return;
     
-    // Collect all paths to delete
-    QStringList pathsToDelete;
+    // Collect all unique paths to delete (only use first column to avoid duplicates)
+    QSet<QString> uniquePaths;
     for (const QModelIndex &index : selectedIndices) {
-        if (index.isValid()) {
-            pathsToDelete << fileSystemModel->filePath(index);
+        if (index.isValid() && index.column() == 0) {
+            uniquePaths << fileSystemModel->filePath(index);
         }
     }
     
+    QStringList pathsToDelete = uniquePaths.values();
     if (pathsToDelete.isEmpty()) return;
     
     // Confirm deletion
@@ -1321,14 +1349,15 @@ void MainWindow::onDeletePermanently()
     QModelIndexList selectedIndices = fileTreeView->selectionModel()->selectedIndexes();
     if (selectedIndices.isEmpty()) return;
     
-    // Collect all paths to delete
-    QStringList pathsToDelete;
+    // Collect all unique paths to delete (only use first column to avoid duplicates)
+    QSet<QString> uniquePaths;
     for (const QModelIndex &index : selectedIndices) {
-        if (index.isValid()) {
-            pathsToDelete << fileSystemModel->filePath(index);
+        if (index.isValid() && index.column() == 0) {
+            uniquePaths << fileSystemModel->filePath(index);
         }
     }
     
+    QStringList pathsToDelete = uniquePaths.values();
     if (pathsToDelete.isEmpty()) return;
     
     // Stronger warning for permanent deletion
@@ -1370,7 +1399,7 @@ void MainWindow::onCutFile()
     
     fileClipboard.paths.clear();
     for (const QModelIndex &index : selectedIndices) {
-        if (index.isValid()) {
+        if (index.isValid() && index.column() == 0) {
             fileClipboard.paths << fileSystemModel->filePath(index);
         }
     }
@@ -1386,7 +1415,7 @@ void MainWindow::onCopyFile()
     
     fileClipboard.paths.clear();
     for (const QModelIndex &index : selectedIndices) {
-        if (index.isValid()) {
+        if (index.isValid() && index.column() == 0) {
             fileClipboard.paths << fileSystemModel->filePath(index);
         }
     }
