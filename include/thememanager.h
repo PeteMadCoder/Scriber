@@ -6,15 +6,14 @@
 #include <QColor>
 #include <QSettings>
 #include <QWidget>
+#include <QMap>
+#include <QString>
 
 /**
  * @brief Global theme manager for the application
- * 
- * Manages application-wide theming including:
- * - Global color palette
- * - Application stylesheet
- * - Theme persistence
- * - Theme change notifications
+ *
+ * Manages application-wide theming by loading themes from JSON files.
+ * All theme data is loaded from resources/themes/ directory.
  */
 class ThemeManager : public QObject
 {
@@ -33,6 +32,12 @@ public:
     void setTheme(Theme theme);
     Theme currentTheme() const { return m_currentTheme; }
 
+    // Get available theme IDs
+    QStringList availableThemeIds() const;
+    
+    // Get theme name by ID
+    QString getThemeName(const QString &themeId) const;
+
     // Theme color accessors for consistent styling across widgets
     QColor backgroundColor() const;
     QColor textColor() const;
@@ -42,6 +47,7 @@ public:
     QColor highlightedTextColor() const;
     QColor borderColor() const;
     QColor secondaryColor() const;
+    QColor baseColor() const;
 
     // Apply theme to a specific widget and all its children
     void applyThemeToWidget(QWidget *widget);
@@ -52,8 +58,6 @@ public:
     // Theme import/export
     bool importThemeFromFile(const QString &filePath);
     bool exportThemeToFile(const QString &filePath, Theme theme);
-    bool loadThemeFromJson(const QString &jsonPath);
-    bool saveThemeToJson(const QString &jsonPath, Theme theme);
 
 signals:
     void themeChanged(Theme theme);
@@ -66,9 +70,15 @@ private:
     ThemeManager(const ThemeManager&) = delete;
     ThemeManager& operator=(const ThemeManager&) = delete;
 
-    void loadThemeColors();
+    // Theme loading
+    void loadBuiltInThemes();
+    bool loadThemeFromJson(const QString &jsonPath);
+    bool saveThemeToJson(const QString &jsonPath, Theme theme);
     void loadThemeFromSettings();
     void saveThemeToSettings();
+    
+    // Theme application
+    void applyCurrentTheme();
     void applyGlobalPalette();
     void applyApplicationStylesheet();
     QString buildStylesheet() const;
@@ -76,8 +86,9 @@ private:
     static ThemeManager* s_instance;
 
     Theme m_currentTheme;
-
-    // Theme colors
+    QString m_currentThemeId;
+    
+    // Theme colors structure
     struct ThemeColors {
         QColor background;
         QColor text;
@@ -92,11 +103,36 @@ private:
         QColor border;
         QColor tooltip;
         QColor tooltipText;
-        QColor secondary;  // Secondary/accent color for links, focus, selection
+        QColor secondary;
+        
+        // Markdown-specific colors
+        QColor heading;
+        QColor bold;
+        QColor italic;
+        QColor strikethrough;
+        QColor codeText;
+        QColor codeBackground;
+        QColor link;
+        QColor image;
+        QColor list;
+        QColor taskList;
+        QColor blockquoteText;
+        QColor blockquoteBackground;
+        QColor tableHeaderText;
+        QColor tableCellText;
+        QColor tableHeaderBackground;
+        QColor tableCellBackground;
+        QColor horizontalRule;
+        QColor syntaxFaint;
+        
+        QString name;
+        QString description;
     };
-
-    ThemeColors m_lightColors;
-    ThemeColors m_darkColors;
-    ThemeColors m_pitchBlackColors;
+    
+    // Map of theme ID to theme colors
+    QMap<QString, ThemeColors> m_themes;
     ThemeColors m_currentColors;
+    
+    // Map Theme enum to theme ID
+    QString themeToId(Theme theme) const;
 };

@@ -75,3 +75,12 @@ target_link_libraries(scriber PRIVATE
 # Integrate cmark library (uncomment/comment as needed)
 # find_package(cmark REQUIRED)
 # target_link_libraries(scriber PRIVATE cmark::cmark)
+
+qt_add_executable(test_arg test_arg.cpp)
+target_link_libraries(test_arg PRIVATE Qt6::Core)
+
+qt_add_executable(test_arg_full test_arg_full.cpp)
+target_link_libraries(test_arg_full PRIVATE Qt6::Core)
+
+qt_add_executable(test_missing_arg test_missing_arg.cpp)
+target_link_libraries(test_missing_arg PRIVATE Qt6::Core)

@@ -9,6 +9,11 @@ QT_BEGIN_NAMESPACE
 class QTextDocument;
 QT_END_NAMESPACE
 
+/**
+ * @brief Syntax highlighter for Markdown documents
+ * 
+ * Applies real-time formatting to Markdown content using colors from ThemeManager.
+ */
 class MarkdownHighlighter : public QSyntaxHighlighter
 {
     Q_OBJECT
@@ -32,16 +37,16 @@ private:
     {
         QRegularExpression pattern;
         QTextCharFormat format;
-        int contentGroup = 2; // Default to group 2 for most patterns
+        int contentGroup = 2;
         bool applyBlockFormat = false;
-        bool isMultiLine = false; // For elements that span multiple lines
+        bool isMultiLine = false;
     };
     QVector<HighlightingRule> highlightingRules;
     QVector<HighlightingRule> pythonRules;
     QVector<HighlightingRule> cppRules;
     QVector<HighlightingRule> bashRules;
 
-    // Formats for different Markdown elements
+    // Character formats
     QTextCharFormat heading1Format;
     QTextCharFormat heading2Format;
     QTextCharFormat heading3Format;
@@ -51,7 +56,7 @@ private:
     QTextCharFormat boldFormat;
     QTextCharFormat italicFormat;
     QTextCharFormat strikethroughFormat;
-    QTextCharFormat codeFormat; // Inline code
+    QTextCharFormat codeFormat;
     QTextCharFormat linkFormat;
     QTextCharFormat imageFormat;
     QTextCharFormat listFormat;
@@ -59,7 +64,7 @@ private:
     QTextCharFormat blockquoteFormat;
     QTextCharFormat tableHeaderFormat;
     QTextCharFormat tableCellFormat;
-    QTextCharFormat syntaxFaintFormat; // For syntax characters
+    QTextCharFormat syntaxFaintFormat;
 
     // Block formats
     QTextBlockFormat heading1BlockFormat;
@@ -74,60 +79,27 @@ private:
     QTextBlockFormat tableBlockFormat;
 
     int currentBaseFontSize = 12;
-
-    // --- Theme Colors ---
-    struct ThemeColors {
-        QColor background;
-        QColor text;
-        QColor heading;
-        QColor bold;
-        QColor italic;
-        QColor strikethrough;
-        QColor codeText;
-        QColor codeBackground;
-        QColor link;
-        QColor image;
-        QColor list;
-        QColor taskList;
-        QColor blockquoteText;
-        QColor blockquoteBackground;
-        QColor tableHeaderText;
-        QColor tableCellText;
-        QColor tableHeaderBackground;
-        QColor tableCellBackground;
-        QColor horizontalRule;
-        QColor syntaxFaint;
-        QColor secondary;  // Secondary/accent color from ThemeManager
-    };
-
-    ThemeColors lightColors;
-    ThemeColors darkColors;
-    ThemeColors pitchBlackColors;
-    ThemeColors currentColors;
-
     Theme currentTheme;
 
-    void setupThemeColors();
+    // Code highlighting formats
+    QTextCharFormat keywordFormat;
+    QTextCharFormat commentFormat;
+    QTextCharFormat stringFormat;
+    QTextCharFormat numberFormat;
+    QTextCharFormat functionFormat;
+
     void updateFormatsForTheme();
     void setupInitialRules();
-    
-    // State tracking for multi-line elements
+    void setupPythonRules();
+    void setupCppRules();
+    void setupBashRules();
+    void highlightCodeBlock(const QString &text, int languageState);
+
+    // State tracking
     static const int STATE_NORMAL = 0;
     static const int STATE_IN_CODE_BLOCK = 1;
     static const int STATE_IN_TABLE = 2;
     static const int STATE_IN_CODE_BLOCK_PYTHON = 10;
     static const int STATE_IN_CODE_BLOCK_CPP = 11;
     static const int STATE_IN_CODE_BLOCK_BASH = 12;
-    
-    // Additional formats for code
-    QTextCharFormat keywordFormat;
-    QTextCharFormat commentFormat;
-    QTextCharFormat stringFormat;
-    QTextCharFormat numberFormat;
-    QTextCharFormat functionFormat;
-    
-    void setupPythonRules();
-    void setupCppRules();
-    void setupBashRules();
-    void highlightCodeBlock(const QString &text, int languageState);
 };

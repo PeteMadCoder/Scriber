@@ -1,9 +1,9 @@
 <!-- resources.qrc -->
 <RCC>
     <qresource prefix="/">
-        <file>resources/themes/light.css</file>
-        <file>resources/themes/dark.css</file>
-        <file>resources/themes/pitchblack.css</file>
+        <file>resources/themes/light.json</file>
+        <file>resources/themes/dark.json</file>
+        <file>resources/themes/pitchblack.json</file>
         <file>resources/icons/appicon.png</file>
     </qresource>
 </RCC>
