@@ -54,7 +54,6 @@ void SidebarFileExplorer::createWidgets()
     navLayout->addWidget(parentDirButton);
     
     pathEdit = new QLineEdit();
-    pathEdit->setReadOnly(true);
     pathEdit->setPlaceholderText(tr("Current directory"));
     navLayout->addWidget(pathEdit);
     
@@ -201,7 +200,6 @@ void SidebarFileExplorer::setupConnections()
     // Navigation buttons
     connect(parentDirButton, &QPushButton::clicked, this, &SidebarFileExplorer::onParentDirectory);
     connect(pathEdit, &QLineEdit::editingFinished, [this]() {
-        pathEdit->setReadOnly(true);
         onPathEdited(pathEdit->text());
     });
     connect(refreshButton, &QPushButton::clicked, this, &SidebarFileExplorer::onRefresh);

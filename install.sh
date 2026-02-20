@@ -162,12 +162,8 @@ main() {
     
     check_dependencies
     
-    # Build if not already built
-    if [ ! -f "${BUILD_DIR}/${EXECUTABLE_NAME}" ]; then
-        build_application
-    else
-        echo "Application already built. Skipping build step."
-    fi
+    # Build always to ensure latest changes are included
+    build_application
     
     install_application
     

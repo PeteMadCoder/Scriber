@@ -7,6 +7,7 @@
 #include "sidebarfileexplorer.h"
 #include "toastnotification.h"
 #include "thememanager.h"
+#include "themedialog.h"
 #include "outlinedelegate.h"
 #include <QMenuBar>
 #include <QMenu>
@@ -202,6 +203,12 @@ void MainWindow::openFileInNewTab(const QString &fileName)
     tabWidget->setCurrentIndex(tabIndex);
 
     updateWindowTitle();
+
+    // Update sidebar to show the file's directory
+    if (fileExplorer) {
+        QFileInfo fi(fileName);
+        fileExplorer->setRootPath(fi.absolutePath());
+    }
 }
 
 void MainWindow::setupEditorConnections(EditorWidget *editor)
@@ -297,7 +304,11 @@ void MainWindow::exportToPdf() {
 }
 
 void MainWindow::selectTheme() {
-    // Theme selection handled by ThemeDialog
+    ThemeDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Theme is already applied via ThemeManager::setTheme during preview
+        // Just need to save the theme to settings (done automatically in setTheme)
+    }
 }
 
 void MainWindow::about()

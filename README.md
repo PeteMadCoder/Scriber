@@ -126,52 +126,27 @@ Scriber is built using the Qt 6 framework, primarily leveraging `QPlainTextEdit`
 
 - **File Handling (`FileManager`)**:
   - Manages loading and saving Markdown files.
-  - Handles export to HTML and PDF (using Qt's printing capabilities).
+  - Handles export to HTML and PDF using `cmark` for CommonMark-compliant rendering.
 
-- **Performance Considerations**:
-  - Uses `QSyntaxHighlighter` which is designed for performance with large documents by only processing visible or changed blocks.
-  - Debouncing/throttling mechanisms (via `QTimer`) are recommended for expensive operations like full-document spell checking or highlighting triggered by rapid typing to maintain responsiveness.
+- **Document Outline (`DocumentOutlineWidget`)**:
+  - Uses `cmark` AST to parse and display document structure.
+  - Provides clickable navigation to headings with proper nesting.
+
+- **Sidebar File Explorer (`SidebarFileExplorer`)**:
+  - Toggleable file tree showing current directory structure.
+  - Supports file management: create, delete, rename, duplicate, copy/paste.
 
 ---
 
-## TODO List / Future Improvements
+## Development Roadmap
 
-### Performance Optimization
- - [ ] **Implement Debouncing for `MarkdownHighlighter`**: Use a `QTimer` to delay re-highlighting until the user pauses typing, preventing excessive processing during rapid edits.
- - [ ] **Implement Debouncing for Spell Checker**: Apply a timer to the spell checking trigger (`textChanged`) to avoid re-checking the entire document on every keystroke.
- - [ ] **Profile Application**: Use Qt Creator Profiler or similar tools to identify bottlenecks, especially during scrolling and typing in large documents.
- - [ ] **Optimize `MarkdownHighlighter::highlightBlock`**: Review and simplify regular expressions. Minimize `setFormat` calls. Ensure efficient state handling for multi-line constructs.
- - [ ] **Optimize Spell Checker Highlights**: Ensure efficient application and clearing of misspelling underlines.
+For the complete list of planned features and improvements, see [TODO.md](TODO.md).
 
-### Feature Enhancements
- - [ ] **Advanced Table Support**: Improve table rendering (borders, alignment) and add table editing capabilities (insert row/column, etc.).
- - [ ] **Improved Image Handling**: Display actual images or placeholders instead of just styling the alt text.
- - [ ] **True Horizontal Rules**: Render actual visual lines instead of just styling the `---` text.
- - [ ] **Customizable Keyboard Shortcuts**: Allow users to redefine key bindings.
- - [ ] **Recent Files List**: Implement a menu showing recently opened files.
- - [ ] **Session Management**: Save/restore open files, window size/position.
- - [ ] **Markdown Preview Pane (Optional)**: Add a toggleable side/ bottom panel showing the HTML-rendered version (using `QWebEngineView` or `QTextBrowser` with HTML conversion via `cmark`). **Not part of the core Idea**
- - [ ] **More Export Options**: Enhanced HTML export with better styling, direct PDF export using `cmark` and Qt PDF, or other formats.
-
-### UI/UX Improvements
- - [ ] **Enhanced Find Bar**: Add "Replace" functionality to the embedded find bar.
- - [ ] **Find Result Highlighting**: Highlight all occurrences of the search term in the document.
- - [ ] **Improved Spell Check UI**: Add a floating toolbar for quick corrections when right-clicking a misspelled word.
- - [ ] **Customizable Themes**: Allow loading user-defined CSS theme files.
- - [ ] **Font Customization**: UI options for changing the editor font family and base size.
- - [ ] **Improved Context Menu**: Add more Markdown formatting shortcuts and utilities.
-
-### Code Quality & Maintainability
- - [ ] **Integrate `cmark` Library**: Use `cmark` for more robust and spec-compliant Markdown parsing, especially for export features and potentially advanced rendering.
- - [ ] **Add Unit Tests**: Implement tests for core functionalities like file operations, highlighting rules, and find logic.
- - [ ] **Code Documentation**: Add more detailed comments and documentation strings (Doxygen style).
- - [ ] **Refactor Complex Logic**: Break down large functions (`highlightBlock`, `updateFormatsForTheme`) into smaller, more manageable pieces.
-
-### Packaging & Distribution
- - [ ] **Create Windows Installer**: Use tools like NSIS or Inno Setup.
- - [ ] **Create macOS Bundle**: Package as a `.app` bundle with code signing.
- - [ ] **Linux Package**: Create `.deb` (Debian/Ubuntu) and `.rpm` (Fedora) packages.
- - [ ] **Flatpak/AppImage**: Create universal Linux packages.
- - [ ] ***Continuous Integration (CI)**: Set up automated builds and tests using GitHub Actions, GitLab CI, etc.
+Key areas of focus:
+- **Markdown Rendering**: Improved parsing robustness, better table support, true horizontal rules
+- **UI/UX**: Find & replace, recent files, session management, font customization
+- **Theme System**: Secondary/accent color support, customizable themes
+- **Packaging**: Linux packages (.deb, .rpm, AppImage), Windows/macOS installers
+- **Code Quality**: Unit tests, documentation, refactoring
 
 ---
