@@ -165,7 +165,12 @@ void FindBarWidget::createLayout()
     findPreviousButton = new QPushButton(tr("Previous"));
     closeButton = new QPushButton();
     closeButton->setFixedSize(24, 24);
-    closeButton->setText("X");
+    QIcon closeIcon = QIcon::fromTheme("window-close", QIcon::fromTheme("dialog-close"));
+    if (!closeIcon.isNull()) {
+        closeButton->setIcon(closeIcon);
+    } else {
+        closeButton->setText(tr("×"));
+    }
     closeButton->setToolTip(tr("Close find bar (Escape)"));
     
     QHBoxLayout *optionsLayout = new QHBoxLayout;

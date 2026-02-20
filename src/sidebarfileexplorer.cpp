@@ -49,8 +49,11 @@ void SidebarFileExplorer::createWidgets()
     parentDirButton->setFixedSize(28, 28);
     parentDirButton->setToolTip(tr("Go to Parent Directory (Backspace)"));
     QIcon parentIcon = QIcon::fromTheme("go-up", QIcon::fromTheme("folder-open"));
-    parentDirButton->setIcon(parentIcon.isNull() ? QIcon() : parentIcon);
-    if (parentIcon.isNull()) parentDirButton->setText("↑");
+    if (!parentIcon.isNull()) {
+        parentDirButton->setIcon(parentIcon);
+    } else {
+        parentDirButton->setText(tr("↑"));
+    }
     navLayout->addWidget(parentDirButton);
     
     pathEdit = new QLineEdit();
@@ -61,8 +64,11 @@ void SidebarFileExplorer::createWidgets()
     refreshButton->setFixedSize(28, 28);
     refreshButton->setToolTip(tr("Refresh (F5)"));
     QIcon refreshIcon = QIcon::fromTheme("view-refresh", QIcon::fromTheme("reload"));
-    refreshButton->setIcon(refreshIcon.isNull() ? QIcon() : refreshIcon);
-    if (refreshIcon.isNull()) refreshButton->setText("⟳");
+    if (!refreshIcon.isNull()) {
+        refreshButton->setIcon(refreshIcon);
+    } else {
+        refreshButton->setText(tr("⟳"));
+    }
     navLayout->addWidget(refreshButton);
     
     mainLayout->addLayout(navLayout);

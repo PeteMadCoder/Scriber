@@ -27,9 +27,9 @@ void ThemeDialog::setupUI()
     auto *descLabel = new QLabel(tr(
         "Choose a theme for the application. The theme affects all interface "
         "elements including menus, toolbars, dialogs, and the editor.\n\n"
-        "• Light – Bright theme for well-lit environments\n"
-        "• Dark – Comfortable theme for general use\n"
-        "• Pitch Black – High contrast, OLED-friendly theme"
+        "– Light – Bright theme for well-lit environments\n"
+        "– Dark – Comfortable theme for general use\n"
+        "– Pitch Black – High contrast, OLED-friendly theme"
     ));
     descLabel->setWordWrap(true);
     descLabel->setOpenExternalLinks(false);
