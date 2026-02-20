@@ -182,6 +182,6 @@
 ## Known Issues
 
 - [ ] **Underscore Handling in Technical Text**: Variables like `my_variable_name` incorrectly trigger italic formatting
-- [ ] **Sidebar Path Not Syncing**: When opening files, sidebar doesn't navigate to file's directory
+- [x] **Sidebar Path Not Syncing**: When opening files, sidebar doesn't navigate to file's directory
 - [ ] **Hardcoded Accent Colors**: Blue color hardcoded in multiple places instead of using theme colors
 - [ ] **No Text Justification**: Lines are left-aligned only, affecting readability on wide screens
