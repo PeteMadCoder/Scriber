@@ -97,6 +97,7 @@ private:
         QColor tableCellBackground;
         QColor horizontalRule;
         QColor syntaxFaint;
+        QColor secondary;  // Secondary/accent color from ThemeManager
     };
 
     ThemeColors lightColors;

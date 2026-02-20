@@ -1,0 +1,42 @@
+{
+  "name": "Pitch Black",
+  "id": "pitchblack",
+  "version": "1.0",
+  "colors": {
+    "background": "#000000",
+    "text": "#E0E0E0",
+    "window": "#0A0A0A",
+    "windowText": "#E0E0E0",
+    "base": "#0F0F0F",
+    "alternateBase": "#191919",
+    "highlight": "#64B4FF",
+    "highlightedText": "#FFFFFF",
+    "button": "#1E1E1E",
+    "buttonText": "#E0E0E0",
+    "border": "#505050",
+    "tooltip": "#141414",
+    "tooltipText": "#E0E0E0",
+    "secondary": "#87CF3E"
+  },
+  "markdownColors": {
+    "heading": "#E0E0E0",
+    "bold": "#E0E0E0",
+    "italic": "#E0E0E0",
+    "strikethrough": "#808080",
+    "codeText": "#C8C8C8",
+    "codeBackground": "#141414",
+    "link": "#64B4FF",
+    "image": "#969696",
+    "list": "#E0E0E0",
+    "taskList": "#E0E0E0",
+    "blockquoteText": "#B4B4B4",
+    "blockquoteBackground": "#141414",
+    "tableHeaderText": "#E0E0E0",
+    "tableCellText": "#E0E0E0",
+    "tableHeaderBackground": "#1E1E1E",
+    "tableCellBackground": "#000000",
+    "horizontalRule": "#505050",
+    "syntaxFaint": "#505050"
+  },
+  "description": "A pure black theme with high contrast text and Mint green accent. Perfect for OLED displays and users who prefer maximum contrast with minimal light emission."
+}

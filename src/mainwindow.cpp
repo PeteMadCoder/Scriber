@@ -96,6 +96,13 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
+    // Connect to theme changes to update find bar colors
+    connect(ThemeManager::instance(), &ThemeManager::themeChanged, this, [this]() {
+        if (findBarWidget) {
+            findBarWidget->applyThemeColors();
+        }
+    });
+
     // Don't create initial tab here - only create if no files are opened
     // This allows command-line file opening to work without an extra empty tab
 

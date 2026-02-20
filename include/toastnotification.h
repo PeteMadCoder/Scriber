@@ -29,7 +29,8 @@ protected:
 
 private:
     void positionToast();
-    
+    void updateStylesheet();
+
     QTimer *hideTimer;
     QPropertyAnimation *fadeInAnimation;
     QGraphicsOpacityEffect *opacityEffect;

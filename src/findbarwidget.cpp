@@ -1,5 +1,6 @@
 #include "findbarwidget.h"
 #include "editorwidget.h"
+#include "thememanager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -10,15 +11,27 @@ FindBarWidget::FindBarWidget(QWidget *parent)
     , currentEditor(nullptr)
     , m_isFindBarVisible(false)
 {
-    setObjectName("findBar");
+    setObjectName("findBarWidget");
     createLayout();
-    
+
     // Connect signals
     connect(findLineEdit, &QLineEdit::returnPressed, this, &FindBarWidget::onFindNext);
     connect(findNextButton, &QPushButton::clicked, this, &FindBarWidget::onFindNext);
     connect(findPreviousButton, &QPushButton::clicked, this, &FindBarWidget::onFindPrevious);
     connect(closeButton, &QPushButton::clicked, this, &FindBarWidget::onClose);
     connect(findLineEdit, &QLineEdit::textEdited, this, &FindBarWidget::onFindTextEdited);
+
+    // Apply theme colors
+    applyThemeColors();
+}
+
+void FindBarWidget::applyThemeColors()
+{
+    ThemeManager *themeManager = ThemeManager::instance();
+    if (!themeManager) return;
+
+    // Update status label color using theme colors instead of hardcoded gray
+    findStatusLabel->setStyleSheet(QString("QLabel { color: %1; }").arg(themeManager->textColor().name()));
 }
 
 void FindBarWidget::setEditor(EditorWidget *editor)
@@ -156,7 +169,7 @@ void FindBarWidget::createLayout()
     findLineEdit = new QLineEdit();
     findStatusLabel = new QLabel();
     findStatusLabel->setMinimumWidth(150);
-    findStatusLabel->setStyleSheet("QLabel { color : gray; }");
+    // Note: Color is now applied via applyThemeColors() instead of hardcoded stylesheet
     
     caseSensitiveCheckBox = new QCheckBox(tr("Case sensitive"));
     wholeWordsCheckBox = new QCheckBox(tr("Whole words"));

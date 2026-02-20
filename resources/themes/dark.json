@@ -1,0 +1,42 @@
+{
+  "name": "Dark",
+  "id": "dark",
+  "version": "1.0",
+  "colors": {
+    "background": "#0D1117",
+    "text": "#E1E4E8",
+    "window": "#1E232D",
+    "windowText": "#E1E4E8",
+    "base": "#191E28",
+    "alternateBase": "#232832",
+    "highlight": "#58A6FF",
+    "highlightedText": "#FFFFFF",
+    "button": "#2D323C",
+    "buttonText": "#E1E4E8",
+    "border": "#3C414B",
+    "tooltip": "#282D37",
+    "tooltipText": "#E1E4E8",
+    "secondary": "#58A6FF"
+  },
+  "markdownColors": {
+    "heading": "#E1E4E8",
+    "bold": "#E1E4E8",
+    "italic": "#E1E4E8",
+    "strikethrough": "#B4B4B4",
+    "codeText": "#C678DD",
+    "codeBackground": "#161B22",
+    "link": "#58A6FF",
+    "image": "#8B949E",
+    "list": "#E1E4E8",
+    "taskList": "#E1E4E8",
+    "blockquoteText": "#8B949E",
+    "blockquoteBackground": "#161B22",
+    "tableHeaderText": "#E1E4E8",
+    "tableCellText": "#E1E4E8",
+    "tableHeaderBackground": "#1E232D",
+    "tableCellBackground": "#191E23",
+    "horizontalRule": "#3C414B",
+    "syntaxFaint": "#646464"
+  },
+  "description": "A comfortable dark gray theme that reduces eye strain. Ideal for extended writing sessions and low-light environments."
+}

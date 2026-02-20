@@ -1,0 +1,42 @@
+{
+  "name": "Light",
+  "id": "light",
+  "version": "1.0",
+  "colors": {
+    "background": "#F5F5F5",
+    "text": "#24292F",
+    "window": "#F0F0F0",
+    "windowText": "#24292F",
+    "base": "#FFFFFF",
+    "alternateBase": "#EBEBEB",
+    "highlight": "#0078D7",
+    "highlightedText": "#FFFFFF",
+    "button": "#DCDCDC",
+    "buttonText": "#24292F",
+    "border": "#C8C8C8",
+    "tooltip": "#FFFFDC",
+    "tooltipText": "#24292F",
+    "secondary": "#0366D6"
+  },
+  "markdownColors": {
+    "heading": "#24292F",
+    "bold": "#24292F",
+    "italic": "#24292F",
+    "strikethrough": "#646464",
+    "codeText": "#9C27B0",
+    "codeBackground": "#F6F8FA",
+    "link": "#0366D6",
+    "image": "#6A737D",
+    "list": "#24292F",
+    "taskList": "#24292F",
+    "blockquoteText": "#6A737D",
+    "blockquoteBackground": "#F6F8FA",
+    "tableHeaderText": "#24292F",
+    "tableCellText": "#24292F",
+    "tableHeaderBackground": "#F6F8FA",
+    "tableCellBackground": "#FFFFFF",
+    "horizontalRule": "#DCDCDC",
+    "syntaxFaint": "#969696"
+  },
+  "description": "A bright, clean theme with white backgrounds and dark text. Best suited for well-lit environments and users who prefer traditional light interfaces."
+}

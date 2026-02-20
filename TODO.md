@@ -106,11 +106,11 @@
 
 ### Sidebar Improvements
 
-- [ ] **Fix Sidebar Path on File Open**:
+- [x] **Fix Sidebar Path on File Open**:
     - When opening a file (especially via command line), set sidebar to file's directory
     - Currently shows default root instead of file location
 
-- [ ] **Editable Path in Sidebar**:
+- [x] **Editable Path in Sidebar**:
     - Make path field in `SidebarFileExplorer` editable on click/focus
     - Allow manual path entry with validation
     - Refresh directory on Enter key or refresh button

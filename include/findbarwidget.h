@@ -20,18 +20,21 @@ class FindBarWidget : public QWidget
 
 public:
     explicit FindBarWidget(QWidget *parent = nullptr);
-    
+
     /// Set the editor to search in
     void setEditor(EditorWidget *editor);
-    
+
     /// Show the find bar and focus the input
     void showFindBar();
-    
+
     /// Hide the find bar
     void hideFindBar();
-    
+
     /// Check if the find bar is visible
     bool isFindBarVisible() const { return m_isFindBarVisible; }
+
+    /// Apply current theme colors (called when theme changes)
+    void applyThemeColors();
 
 signals:
     void findNextRequested();

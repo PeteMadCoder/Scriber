@@ -63,6 +63,7 @@ void MarkdownHighlighter::setupThemeColors()
     lightColors.tableCellBackground = QColor(255, 255, 255);
     lightColors.horizontalRule = QColor(220, 220, 220);
     lightColors.syntaxFaint = QColor(150, 150, 150);
+    lightColors.secondary = QColor(3, 102, 214);  // Sync with ThemeManager secondary
 
     // Dark Theme Colors
     darkColors.background = QColor(13, 17, 23);
@@ -85,17 +86,18 @@ void MarkdownHighlighter::setupThemeColors()
     darkColors.tableCellBackground = QColor(25, 30, 35);
     darkColors.horizontalRule = QColor(60, 65, 75);
     darkColors.syntaxFaint = QColor(100, 100, 100);
+    darkColors.secondary = QColor(88, 166, 255);  // Sync with ThemeManager secondary
 
     // Pitch Black Theme Colors
-    pitchBlackColors.background = QColor(0, 0, 0); 
-    pitchBlackColors.text = QColor(224, 224, 224); 
+    pitchBlackColors.background = QColor(0, 0, 0);
+    pitchBlackColors.text = QColor(224, 224, 224);
     pitchBlackColors.heading = QColor(224, 224, 224);
     pitchBlackColors.bold = QColor(224, 224, 224);
     pitchBlackColors.italic = QColor(224, 224, 224);
     pitchBlackColors.strikethrough = QColor(128, 128, 128);
-    pitchBlackColors.codeText = QColor(200, 200, 200); 
-    pitchBlackColors.codeBackground = QColor(20, 20, 20); 
-    pitchBlackColors.link = QColor(100, 180, 255); 
+    pitchBlackColors.codeText = QColor(200, 200, 200);
+    pitchBlackColors.codeBackground = QColor(20, 20, 20);
+    pitchBlackColors.link = QColor(100, 180, 255);
     pitchBlackColors.image = QColor(150, 150, 150);
     pitchBlackColors.list = QColor(224, 224, 224);
     pitchBlackColors.taskList = QColor(224, 224, 224);
@@ -107,6 +109,7 @@ void MarkdownHighlighter::setupThemeColors()
     pitchBlackColors.tableCellBackground = QColor(0, 0, 0);
     pitchBlackColors.horizontalRule = QColor(80, 80, 80);
     pitchBlackColors.syntaxFaint = QColor(80, 80, 80);
+    pitchBlackColors.secondary = QColor(135, 207, 62);  // Mint's green (#87CF3E)
 }
 
 void MarkdownHighlighter::updateFormatsForTheme()

@@ -41,12 +41,19 @@ public:
     QColor highlightColor() const;
     QColor highlightedTextColor() const;
     QColor borderColor() const;
+    QColor secondaryColor() const;
 
     // Apply theme to a specific widget and all its children
     void applyThemeToWidget(QWidget *widget);
 
     // Get arrow icon for tree views (color-matched to current theme)
     QIcon getArrowIcon(bool expanded) const;
+
+    // Theme import/export
+    bool importThemeFromFile(const QString &filePath);
+    bool exportThemeToFile(const QString &filePath, Theme theme);
+    bool loadThemeFromJson(const QString &jsonPath);
+    bool saveThemeToJson(const QString &jsonPath, Theme theme);
 
 signals:
     void themeChanged(Theme theme);
@@ -85,6 +92,7 @@ private:
         QColor border;
         QColor tooltip;
         QColor tooltipText;
+        QColor secondary;  // Secondary/accent color for links, focus, selection
     };
 
     ThemeColors m_lightColors;
