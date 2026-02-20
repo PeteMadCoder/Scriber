@@ -289,24 +289,30 @@ void MarkdownHighlighter::setupInitialRules()
     rule.applyBlockFormat = true;
     highlightingRules.append(rule);
 
-    // --- Italic ---
-    rule.pattern = QRegularExpression(QStringLiteral("(\\*)([^_]+?)(\\*)"));
+    // --- Italic (asterisk) ---
+    // Asterisks can be used more freely, but require word boundaries
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w*])(\\*)([^*]+?)(\\*)(?![\\w*])"));
     rule.format = italicFormat;
     rule.contentGroup = 2;
     highlightingRules.append(rule);
 
-    rule.pattern = QRegularExpression(QStringLiteral("(_)([^_]+?)(_)"));
+    // --- Italic (underscore) ---
+    // Underscores for italic must have word boundaries and not be part of identifiers
+    // Match single underscores that surround text, with word boundaries
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(_[^_\\s][^_]*?_)(?![\\w_])"));
     rule.format = italicFormat;
-    rule.contentGroup = 2;
+    rule.contentGroup = 1;
     highlightingRules.append(rule);
 
-    // --- Bold ---
-    rule.pattern = QRegularExpression(QStringLiteral("\\*\\*(.*?)\\*\\*"));
+    // --- Bold (asterisk) ---
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w*])(\\*\\*)([^*]+?)(\\*\\*)(?![\\w*])"));
     rule.format = boldFormat;
-    rule.contentGroup = 1; 
+    rule.contentGroup = 2;
     highlightingRules.append(rule);
 
-    rule.pattern = QRegularExpression(QStringLiteral("(?<!_)__([^_]+?)__(?!_)"));
+    // --- Bold (underscore) ---
+    // Double underscores with strict word boundaries to avoid matching __attribute__ etc.
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(__[^_\\s][^_]*?__)(?![\\w_])"));
     rule.format = boldFormat;
     rule.contentGroup = 1;
     highlightingRules.append(rule);
