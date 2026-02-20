@@ -233,11 +233,18 @@ void SidebarFileExplorer::setupConnections()
 
 void SidebarFileExplorer::setRootPath(const QString &path)
 {
-    QModelIndex index = fileSystemModel->index(path);
+    QFileInfo fi(path);
+    QString dirPath = fi.absolutePath();
+    
+    QModelIndex index = fileSystemModel->index(dirPath);
     if (index.isValid()) {
-        fileSystemModel->setRootPath(path);
+        fileSystemModel->setRootPath(dirPath);
         fileTreeView->setRootIndex(index);
-        pathEdit->setText(path);
+        pathEdit->setText(dirPath);
+    } else {
+        // Fallback: try to set root path directly
+        fileSystemModel->setRootPath(dirPath);
+        pathEdit->setText(dirPath);
     }
 }
 
