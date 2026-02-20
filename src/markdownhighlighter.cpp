@@ -97,7 +97,7 @@ void MarkdownHighlighter::setupThemeColors()
     pitchBlackColors.strikethrough = QColor(128, 128, 128);
     pitchBlackColors.codeText = QColor(200, 200, 200);
     pitchBlackColors.codeBackground = QColor(20, 20, 20);
-    pitchBlackColors.link = QColor(100, 180, 255);
+    pitchBlackColors.link = QColor(135, 207, 62);  // Mint's green (#87CF3E)
     pitchBlackColors.image = QColor(150, 150, 150);
     pitchBlackColors.list = QColor(224, 224, 224);
     pitchBlackColors.taskList = QColor(224, 224, 224);

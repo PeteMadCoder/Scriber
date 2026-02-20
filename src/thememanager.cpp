@@ -146,7 +146,7 @@ void ThemeManager::loadThemeColors()
     m_pitchBlackColors.windowText = QColor(224, 224, 224);
     m_pitchBlackColors.base = QColor(15, 15, 15);
     m_pitchBlackColors.alternateBase = QColor(25, 25, 25);
-    m_pitchBlackColors.highlight = QColor(100, 180, 255);
+    m_pitchBlackColors.highlight = QColor(135, 207, 62);  // Mint's green (#87CF3E)
     m_pitchBlackColors.highlightedText = QColor(255, 255, 255);
     m_pitchBlackColors.button = QColor(30, 30, 30);
     m_pitchBlackColors.buttonText = QColor(224, 224, 224);
