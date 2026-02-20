@@ -180,13 +180,9 @@ void MainWindow::openFileInNewTab(const QString &fileName)
     for (int i = 0; i < editorTabs.size(); ++i) {
         if (editorTabs[i].filePath == fileName) {
             tabWidget->setCurrentIndex(i);
-            // Update sidebar even if file is already open
-            if (fileExplorer) {
-                QFileInfo fi(fileName);
-                fileExplorer->setRootPath(fi.absolutePath());
-                if (sidebarDock && !sidebarDock->isVisible()) {
-                    sidebarDock->show();
-                }
+            // Make sure sidebar is visible when opening a file
+            if (sidebarDock && !sidebarDock->isVisible()) {
+                sidebarDock->show();
             }
             return;
         }
@@ -212,15 +208,9 @@ void MainWindow::openFileInNewTab(const QString &fileName)
 
     updateWindowTitle();
 
-    // Update sidebar to show the file's directory and ensure it's visible
-    if (fileExplorer) {
-        QFileInfo fi(fileName);
-        fileExplorer->setRootPath(fi.absolutePath());
-
-        // Make sure sidebar is visible when opening a file
-        if (sidebarDock && !sidebarDock->isVisible()) {
-            sidebarDock->show();
-        }
+    // Make sure sidebar is visible when opening a file
+    if (sidebarDock && !sidebarDock->isVisible()) {
+        sidebarDock->show();
     }
 }
 
@@ -472,11 +462,6 @@ void MainWindow::setCurrentFile(const QString &fileName)
 
     updateTabTitle(currentIndex);
     updateWindowTitle();
-
-    if (fileExplorer && !fileName.isEmpty()) {
-        QFileInfo fi(fileName);
-        fileExplorer->setRootPath(fi.absolutePath());
-    }
 }
 
 void MainWindow::updateTabTitle(int index)
