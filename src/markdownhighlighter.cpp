@@ -249,9 +249,9 @@ void MarkdownHighlighter::setupInitialRules()
     highlightingRules.append(rule);
 
     // Italic (underscore)
-    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(_[^_\\s][^_]*?_)(?![\\w_])"));
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(_)([^_\\s][^_]*?)(_)(?![\\w_])"));
     rule.format = italicFormat;
-    rule.contentGroup = 1;
+    rule.contentGroup = 2;
     highlightingRules.append(rule);
 
     // Bold (asterisk)
@@ -261,9 +261,9 @@ void MarkdownHighlighter::setupInitialRules()
     highlightingRules.append(rule);
 
     // Bold (underscore)
-    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(__[^_\\s][^_]*?__)(?![\\w_])"));
+    rule.pattern = QRegularExpression(QStringLiteral("(?<![\\w_])(__)([^_\\s][^_]*?)(__)(?![\\w_])"));
     rule.format = boldFormat;
-    rule.contentGroup = 1;
+    rule.contentGroup = 2;
     highlightingRules.append(rule);
 
     // Strikethrough

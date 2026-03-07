@@ -139,6 +139,10 @@ QString EditorWidget::renderMarkdownToHtml(const QString& markdown) {
     QString result = QString::fromUtf8(html);
     free(html);
     
+    // Qt's QTextDocumentFragment strips <hr> tags.
+    // Replace <hr /> with a visual HTML table that creates a horizontal line.
+    result.replace(QRegularExpression("<hr\\s*/?>"), "<table width='100%' style='margin-top:10px; margin-bottom:10px;' cellspacing='0' cellpadding='0'><tr><td style='border-top: 1px solid gray; height: 1px;'></td></tr></table>");
+    
     // cmark wraps standard text in <p>...</p>\n. Since we are rendering block by block,
     // we want to strip the outer paragraph tags to prevent QTextEdit from inserting extra lines.
     if (result.startsWith("<p>") && result.endsWith("</p>\n")) {
@@ -219,7 +223,8 @@ void EditorWidget::revealBlock(QTextBlock block) {
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     
     // Remove list formatting if the rendered block was a list
-    cursor.setBlockFormat(QTextBlockFormat());
+    QTextBlockFormat clearFormat;
+    cursor.setBlockFormat(clearFormat);
     cursor.setCharFormat(QTextCharFormat());
     QTextBlock currentB = cursor.block();
     if (QTextList* list = currentB.textList()) {
