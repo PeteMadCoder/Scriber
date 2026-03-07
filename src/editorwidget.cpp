@@ -678,7 +678,7 @@ void EditorWidget::highlightMisspelledWords()
 
     // --- Find and Highlight Misspelled Words ---
     QRegularExpression wordRegex(QStringLiteral("\\b(\\w+)\\b"));
-    QString documentText = getRawMarkdown();
+    QString documentText = document()->toPlainText();
 
     QRegularExpressionMatchIterator matchIterator = wordRegex.globalMatch(documentText);
 
