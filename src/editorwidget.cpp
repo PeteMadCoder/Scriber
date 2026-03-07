@@ -25,7 +25,7 @@ EditorWidget::EditorWidget(QWidget *parent)
 
     // Set line spacing for better readability
     QTextBlockFormat blockFormat;
-    blockFormat.setLineHeight(125, QTextBlockFormat::FixedHeight);
+    blockFormat.setLineHeight(110, QTextBlockFormat::ProportionalHeight);
     textCursor().setBlockFormat(blockFormat);
 
     // Ensure no background color interference
@@ -426,7 +426,7 @@ void EditorWidget::updateFont() {
     
     // Update line spacing
     QTextBlockFormat blockFormat;
-    blockFormat.setLineHeight(100 + currentZoom * 2, QTextBlockFormat::FixedHeight);
+    blockFormat.setLineHeight(100 + currentZoom, QTextBlockFormat::ProportionalHeight);
     textCursor().setBlockFormat(blockFormat);
     
     // CRITICAL: Force a complete refresh of the text layout

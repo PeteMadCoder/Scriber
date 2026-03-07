@@ -165,39 +165,39 @@ void MarkdownHighlighter::updateFormatsForTheme()
     // Update block formats
     heading1BlockFormat.setBottomMargin(15);
     heading1BlockFormat.setTopMargin(20);
-    heading1BlockFormat.setLineHeight(120, QTextBlockFormat::FixedHeight);
+    heading1BlockFormat.setLineHeight(115, QTextBlockFormat::ProportionalHeight);
 
     heading2BlockFormat.setBottomMargin(12);
     heading2BlockFormat.setTopMargin(18);
-    heading2BlockFormat.setLineHeight(115, QTextBlockFormat::FixedHeight);
+    heading2BlockFormat.setLineHeight(110, QTextBlockFormat::ProportionalHeight);
 
     heading3BlockFormat.setBottomMargin(10);
     heading3BlockFormat.setTopMargin(15);
-    heading3BlockFormat.setLineHeight(110, QTextBlockFormat::FixedHeight);
+    heading3BlockFormat.setLineHeight(105, QTextBlockFormat::ProportionalHeight);
 
     heading4BlockFormat.setBottomMargin(8);
     heading4BlockFormat.setTopMargin(12);
-    heading4BlockFormat.setLineHeight(105, QTextBlockFormat::FixedHeight);
+    heading4BlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
     heading5BlockFormat.setBottomMargin(6);
     heading5BlockFormat.setTopMargin(10);
-    heading5BlockFormat.setLineHeight(102, QTextBlockFormat::FixedHeight);
+    heading5BlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
     heading6BlockFormat.setBottomMargin(4);
     heading6BlockFormat.setTopMargin(8);
-    heading6BlockFormat.setLineHeight(100, QTextBlockFormat::FixedHeight);
+    heading6BlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
     codeBlockBlockFormat.setBackground(codeBgColor);
-    codeBlockBlockFormat.setLineHeight(105, QTextBlockFormat::FixedHeight);
+    codeBlockBlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
     blockquoteBlockFormat.setBackground(blockquoteBg);
     blockquoteBlockFormat.setLeftMargin(15);
-    blockquoteBlockFormat.setLineHeight(105, QTextBlockFormat::FixedHeight);
+    blockquoteBlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
     horizontalRuleBlockFormat.setBackground(QBrush(horizontalRuleColor));
     horizontalRuleBlockFormat.setLineHeight(1, QTextBlockFormat::FixedHeight);
 
-    tableBlockFormat.setLineHeight(105, QTextBlockFormat::FixedHeight);
+    tableBlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 }
 
 void MarkdownHighlighter::setupInitialRules()
