@@ -1,4 +1,5 @@
 #include "markdownhighlighter.h"
+#include "editorwidget.h"
 #include "thememanager.h"
 #include <QTextCharFormat>
 #include <QRegularExpression>
@@ -317,6 +318,12 @@ void MarkdownHighlighter::setupInitialRules()
 
 void MarkdownHighlighter::highlightBlock(const QString &text)
 {
+    // Skip highlighting if the block is currently rendered as Rich Text
+    MarkdownBlockData* data = static_cast<MarkdownBlockData*>(currentBlock().userData());
+    if (data && data->isRendered) {
+        return;
+    }
+
     // Apply block-level formatting
     if (text.startsWith("# ")) {
         currentBlock().setUserState(STATE_NORMAL);

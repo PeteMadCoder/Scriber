@@ -26,11 +26,11 @@
 
 ### Live Preview Architecture (Active Block Swapping)
 - [x] **Migrate to QTextEdit**: Change `EditorWidget` base class from `QPlainTextEdit` to `QTextEdit` to support rich text layouts, tables, and inline images.
-- [ ] **Active Block Tracking**: Implement logic in `EditorWidget` to track cursor movement and identify the currently active `QTextBlock` (the line being edited).
-- [ ] **Block Swapping Logic**: 
+- [x] **Active Block Tracking**: Implement logic in `EditorWidget` to track cursor movement and identify the currently active `QTextBlock` (the line being edited).
+- [x] **Block Swapping Logic**: 
     - When a block is active, display raw Markdown notation for editing.
     - When a block becomes inactive, replace its content with fully rendered Rich Text (hiding syntax characters like `**` or `#`).
-- [ ] **Markdown State Management**: Store the original raw Markdown string in `QTextBlockUserData` so it can be perfectly restored when the user clicks back into the rendered text block.
+- [x] **Markdown State Management**: Store the original raw Markdown string in `QTextBlockUserData` so it can be perfectly restored when the user clicks back into the rendered text block.
 
 ### Rich Text Features (Requires QTextEdit Migration)
 - [ ] **Inline Image Support**: Display actual images within the editor view when an image block is inactive.

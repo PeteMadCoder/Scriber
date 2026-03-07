@@ -1,6 +1,15 @@
 #pragma once
 #include <QTextEdit>
+#include <QTextBlockUserData>
 #include <QScopedPointer>
+
+class MarkdownBlockData : public QTextBlockUserData {
+public:
+    QString rawMarkdown;
+    bool isRendered = false;
+};
+
+class MarkdownHighlighter; // Forward declaration
 #include <QKeyEvent>
 #include <QFocusEvent>
 #include <QScopedPointer>
@@ -36,6 +45,8 @@ public:
     void setSpellCheckEnabled(bool enabled);
     void setSpellCheckLanguage(const QString &language);
     bool isSpellCheckEnabled() const;
+    QString getRawMarkdown() const;
+    void renderAllBlocks();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -45,13 +56,19 @@ protected:
 
 private slots:
     void checkSpelling();
+    void onCursorPositionChanged();
 
 private:
     QScopedPointer<MarkdownHighlighter> highlighter; // Manage the highlighter's lifetime
     Theme currentTheme; // Track current theme state
     int currentZoom;
+    int activeBlockNumber = -1; // Track the block currently being edited
 
     void applyTheme(); // Apply the current theme (palette, stylesheet)
+
+    void renderBlock(QTextBlock block);
+    void revealBlock(QTextBlock block);
+    QString renderMarkdownToHtml(const QString& markdown);
 
     void insertMarkdownPair(const QString &opening, const QString &closing);
     bool handleBackspace();

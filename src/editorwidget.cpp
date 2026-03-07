@@ -13,6 +13,8 @@
 #include <QMenu> 
 #include <QAction> 
 #include <QScrollBar>
+#include <QTextDocumentFragment>
+#include <cmark.h>
 
 
 EditorWidget::EditorWidget(QWidget *parent)
@@ -92,11 +94,144 @@ EditorWidget::EditorWidget(QWidget *parent)
     if (spellCheckEnabled) {
         QTimer::singleShot(0, this, &EditorWidget::checkSpelling);
     }
+
+    // Connect cursor position tracking for Live Preview
+    connect(this, &QTextEdit::cursorPositionChanged, this, &EditorWidget::onCursorPositionChanged);
 }
 
 EditorWidget::~EditorWidget()
 {
     // QScopedPointer and Qt parent-child hierarchy handle cleanup automatically
+}
+
+void EditorWidget::onCursorPositionChanged()
+{
+    int currentBlockNumber = textCursor().blockNumber();
+    
+    // If we've moved to a new block
+    if (currentBlockNumber != activeBlockNumber) {
+        int previousBlockNumber = activeBlockNumber;
+        activeBlockNumber = currentBlockNumber;
+        
+        // Block signals to prevent infinite loops and undo stack pollution from automatic formatting
+        bool oldState = document()->signalsBlocked();
+        document()->blockSignals(true);
+        
+        // Block we just left -> Render it (Hide Markdown)
+        if (previousBlockNumber >= 0 && previousBlockNumber < document()->blockCount()) {
+            QTextBlock prevBlock = document()->findBlockByNumber(previousBlockNumber);
+            renderBlock(prevBlock);
+        }
+        
+        // Block we just entered -> Reveal it (Show raw Markdown)
+        QTextBlock currentBlock = document()->findBlockByNumber(activeBlockNumber);
+        revealBlock(currentBlock);
+        
+        document()->blockSignals(oldState);
+    }
+}
+
+QString EditorWidget::renderMarkdownToHtml(const QString& markdown) {
+    QByteArray utf8 = markdown.toUtf8();
+    int options = CMARK_OPT_DEFAULT | CMARK_OPT_SMART | CMARK_OPT_VALIDATE_UTF8;
+    char *html = cmark_markdown_to_html(utf8.constData(), utf8.size(), options);
+    QString result = QString::fromUtf8(html);
+    free(html);
+    
+    // cmark wraps standard text in <p>...</p>\n. Since we are rendering block by block,
+    // we want to strip the outer paragraph tags to prevent QTextEdit from inserting extra lines.
+    if (result.startsWith("<p>") && result.endsWith("</p>\n")) {
+        result = result.mid(3, result.length() - 8);
+    }
+    
+    // Also remove trailing newlines for headings to avoid double spacing
+    if (result.endsWith("\n")) {
+        result.chop(1);
+    }
+    
+    return result;
+}
+
+void EditorWidget::renderBlock(QTextBlock block) {
+    if (!block.isValid()) return;
+    
+    MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
+    if (!data) {
+        data = new MarkdownBlockData();
+        // Qt takes ownership of userData
+        const_cast<QTextBlock&>(block).setUserData(data); 
+    }
+
+    if (data->isRendered) return;
+
+    data->rawMarkdown = block.text();
+    QString html = renderMarkdownToHtml(data->rawMarkdown);
+    
+    QTextCursor cursor(block);
+    cursor.select(QTextCursor::BlockUnderCursor);
+    
+    // Insert using a fragment to avoid creating new blocks accidentally
+    QTextDocument tempDoc;
+    tempDoc.setHtml(html);
+    
+    // Apply current font to temp doc to match sizing
+    QFont docFont = document()->defaultFont();
+    tempDoc.setDefaultFont(docFont);
+    
+    QTextCursor tempCursor(&tempDoc);
+    tempCursor.select(QTextCursor::Document);
+    QTextDocumentFragment fragment = tempCursor.selection();
+    
+    cursor.insertFragment(fragment);
+    
+    data->isRendered = true;
+}
+
+void EditorWidget::revealBlock(QTextBlock block) {
+    if (!block.isValid()) return;
+    
+    MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
+    if (!data || !data->isRendered) return;
+
+    QTextCursor cursor(block);
+    cursor.select(QTextCursor::BlockUnderCursor);
+    cursor.insertText(data->rawMarkdown);
+    
+    data->isRendered = false;
+}
+
+void EditorWidget::renderAllBlocks() {
+    bool oldState = document()->signalsBlocked();
+    document()->blockSignals(true);
+
+    QTextBlock block = document()->begin();
+    while (block.isValid()) {
+        if (block.blockNumber() != activeBlockNumber) {
+            renderBlock(block);
+        }
+        block = block.next();
+    }
+
+    document()->blockSignals(oldState);
+}
+
+QString EditorWidget::getRawMarkdown() const {
+    QString fullText;
+    QTextBlock block = document()->begin();
+    while (block.isValid()) {
+        MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
+        if (data && data->isRendered) {
+            fullText += data->rawMarkdown;
+        } else {
+            fullText += block.text();
+        }
+        
+        if (block.next().isValid()) {
+            fullText += "\n";
+        }
+        block = block.next();
+    }
+    return fullText;
 }
 
 void EditorWidget::toggleTheme()
@@ -540,7 +675,7 @@ void EditorWidget::highlightMisspelledWords()
 
     // --- Find and Highlight Misspelled Words ---
     QRegularExpression wordRegex(QStringLiteral("\\b(\\w+)\\b"));
-    QString documentText = document()->toPlainText();
+    QString documentText = getRawMarkdown();
 
     QRegularExpressionMatchIterator matchIterator = wordRegex.globalMatch(documentText);
 

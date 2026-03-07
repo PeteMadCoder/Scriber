@@ -45,6 +45,7 @@ bool FileManager::loadFile(const QString &fileName, EditorWidget *editor)
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
     editor->setPlainText(in.readAll());
+    editor->renderAllBlocks();
 #ifndef QT_NO_CURSOR
     QApplication::restoreOverrideCursor();
 #endif
@@ -68,7 +69,7 @@ bool FileManager::saveFile(const QString &fileName, EditorWidget *editor)
 #ifndef QT_NO_CURSOR
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
-    out << editor->toPlainText(); // Save raw Markdown
+    out << editor->getRawMarkdown(); // Save raw Markdown
 #ifndef QT_NO_CURSOR
     QApplication::restoreOverrideCursor();
 #endif
@@ -93,7 +94,7 @@ bool FileManager::exportToHtml(const QString &fileName, EditorWidget *editor)
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
     
-    QString htmlContent = convertMarkdownToHtml(editor->toPlainText());
+    QString htmlContent = convertMarkdownToHtml(editor->getRawMarkdown());
     
     // Wrap in a basic HTML structure
     out << "<!DOCTYPE html>\n";
@@ -132,7 +133,7 @@ bool FileManager::exportToPdf(const QString &fileName, EditorWidget *editor)
     QApplication::setOverrideCursor(Qt::WaitCursor);
 #endif
     
-    QString htmlContent = convertMarkdownToHtml(editor->toPlainText());
+    QString htmlContent = convertMarkdownToHtml(editor->getRawMarkdown());
     
     // Use a temporary QTextDocument to render the HTML for printing
     QTextDocument doc;

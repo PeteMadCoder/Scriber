@@ -126,7 +126,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     for (int i = editorTabs.size() - 1; i >= 0; --i) {
         const EditorTab &tab = editorTabs[i];
         // Only warn if document is modified AND has content (not empty)
-        bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+        bool hasContent = tab.editor && !tab.editor->getRawMarkdown().trimmed().isEmpty();
         if (tab.editor && tab.editor->document()->isModified() && hasContent) {
             tabWidget->setCurrentIndex(i);
             const QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Scriber"),
@@ -362,7 +362,7 @@ void MainWindow::closeTab(int index)
     EditorTab tab = editorTabs[index];
 
     // Only warn if document is modified AND has content (not empty)
-    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    bool hasContent = tab.editor && !tab.editor->getRawMarkdown().trimmed().isEmpty();
     if (tab.editor && tab.editor->document()->isModified() && hasContent) {
         tabWidget->setCurrentIndex(index);
         QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Scriber"),
@@ -407,7 +407,7 @@ bool MainWindow::maybeSaveCurrentTab()
     const EditorTab &tab = editorTabs[currentIndex];
 
     // Only warn if document is modified AND has content (not empty)
-    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    bool hasContent = tab.editor && !tab.editor->getRawMarkdown().trimmed().isEmpty();
     if (!tab.editor || !tab.editor->document()->isModified() || !hasContent)
         return true;
 
@@ -435,7 +435,7 @@ bool MainWindow::maybeSave()
     const EditorTab &tab = editorTabs[currentIndex];
 
     // Only warn if document is modified AND has content (not empty)
-    bool hasContent = tab.editor && !tab.editor->toPlainText().trimmed().isEmpty();
+    bool hasContent = tab.editor && !tab.editor->getRawMarkdown().trimmed().isEmpty();
     if (!tab.editor || !tab.editor->document()->isModified() || !hasContent)
         return true;
 
@@ -557,7 +557,7 @@ void MainWindow::updateWordCount() {
         return;
     }
 
-    QString text = currentEditor->toPlainText();
+    QString text = currentEditor->getRawMarkdown();
     int wordCount = text.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).size();
     wordCountLabel->setText(tr("Words: %1").arg(wordCount));
 }

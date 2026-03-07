@@ -51,7 +51,7 @@ void DocumentOutlineWidget::updateOutline()
     
     clear();
     
-    QString markdown = currentEditor->toPlainText();
+    QString markdown = currentEditor->getRawMarkdown();
     QByteArray utf8 = markdown.toUtf8();
     
     cmark_node *doc = cmark_parse_document(utf8.constData(), utf8.size(), CMARK_OPT_DEFAULT);
