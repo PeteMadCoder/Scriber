@@ -108,26 +108,77 @@ EditorWidget::~EditorWidget()
 void EditorWidget::onCursorPositionChanged()
 {
     int currentBlockNumber = textCursor().blockNumber();
-    
+
     // If we've moved to a new block
     if (currentBlockNumber != activeBlockNumber) {
         int previousBlockNumber = activeBlockNumber;
         activeBlockNumber = currentBlockNumber;
-        
+
         // Block signals to prevent infinite loops and undo stack pollution from automatic formatting
         bool oldState = document()->signalsBlocked();
         document()->blockSignals(true);
-        
+
         // Block we just left -> Render it (Hide Markdown)
+        // If this was a multi-block element (like HR), render all its blocks
         if (previousBlockNumber >= 0 && previousBlockNumber < document()->blockCount()) {
             QTextBlock prevBlock = document()->findBlockByNumber(previousBlockNumber);
-            renderBlock(prevBlock);
+            if (prevBlock.isValid()) {
+                // Check if this block is part of a multi-block rendered element
+                MarkdownBlockData* prevData = static_cast<MarkdownBlockData*>(prevBlock.userData());
+                if (prevData && prevData->isRendered) {
+                    // This is already rendered, find all blocks of this element and ensure they're marked
+                    QString rawMd = prevData->rawMarkdown;
+                    QTextBlock checkBlock = prevBlock;
+                    while (checkBlock.isValid()) {
+                        MarkdownBlockData* checkData = static_cast<MarkdownBlockData*>(checkBlock.userData());
+                        if (checkData && checkData->isRendered && checkData->rawMarkdown == rawMd) {
+                            // Already marked, continue
+                            checkBlock = checkBlock.next();
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    // Normal block, render it
+                    renderBlock(prevBlock);
+                }
+            }
         }
-        
+
         // Block we just entered -> Reveal it (Show raw Markdown)
+        // If this is a multi-block element (like HR), reveal all its blocks
+        int originalActiveBlockNumber = activeBlockNumber;
         QTextBlock currentBlock = document()->findBlockByNumber(activeBlockNumber);
-        revealBlock(currentBlock);
-        
+        if (currentBlock.isValid()) {
+            MarkdownBlockData* currentData = static_cast<MarkdownBlockData*>(currentBlock.userData());
+            if (currentData && currentData->isRendered) {
+                // This is a rendered element, reveal it and any sibling blocks
+                QString rawMd = currentData->rawMarkdown;
+                int totalMerged = revealBlock(currentBlock);
+                
+                // Reveal any additional blocks that are part of this element
+                QTextBlock nextBlock = currentBlock.next();
+                while (nextBlock.isValid()) {
+                    MarkdownBlockData* nextData = static_cast<MarkdownBlockData*>(nextBlock.userData());
+                    if (nextData && nextData->isRendered && nextData->rawMarkdown == rawMd) {
+                        totalMerged += revealBlock(nextBlock);
+                        nextBlock = nextBlock.next();
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Adjust activeBlockNumber for merged blocks
+                // Blocks after the revealed element shifted up
+                if (totalMerged > 0) {
+                    activeBlockNumber = currentBlock.blockNumber();
+                }
+            } else {
+                // Normal block, just reveal it
+                revealBlock(currentBlock);
+            }
+        }
+
         document()->blockSignals(oldState);
     }
 }
@@ -138,102 +189,173 @@ QString EditorWidget::renderMarkdownToHtml(const QString& markdown) {
     char *html = cmark_markdown_to_html(utf8.constData(), utf8.size(), options);
     QString result = QString::fromUtf8(html);
     free(html);
-    
-    // Qt's QTextDocumentFragment strips <hr> tags.
-    // Replace <hr /> with a visual HTML table that creates a horizontal line.
-    result.replace(QRegularExpression("<hr\\s*/?>"), "<table width='100%' style='margin-top:10px; margin-bottom:10px;' cellspacing='0' cellpadding='0'><tr><td style='border-top: 1px solid gray; height: 1px;'></td></tr></table>");
-    
+
     // cmark wraps standard text in <p>...</p>\n. Since we are rendering block by block,
     // we want to strip the outer paragraph tags to prevent QTextEdit from inserting extra lines.
     if (result.startsWith("<p>") && result.endsWith("</p>\n")) {
         result = result.mid(3, result.length() - 8);
     }
-    
+
     // Also remove trailing newlines for headings to avoid double spacing
     if (result.endsWith("\n")) {
         result.chop(1);
     }
-    
+
     return result;
 }
 
 void EditorWidget::renderBlock(QTextBlock block) {
     if (!block.isValid()) return;
-    
+
     MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
     if (!data) {
         data = new MarkdownBlockData();
-        // Qt takes ownership of userData
-        const_cast<QTextBlock&>(block).setUserData(data); 
+        const_cast<QTextBlock&>(block).setUserData(data);
     }
 
     if (data->isRendered) return;
 
     data->rawMarkdown = block.text();
-    QString raw = data->rawMarkdown; // Keep a copy in case block is deleted
-    QString html = renderMarkdownToHtml(raw);
+    QString raw = data->rawMarkdown;
+    QString trimmedRaw = raw.trimmed();
+
+    // Check if this is a horizontal rule
+    bool isHorizontalRule = (trimmedRaw.startsWith("---") || 
+                             trimmedRaw.startsWith("***") || 
+                             trimmedRaw.startsWith("___")) &&
+                            (trimmedRaw.length() >= 3);
     
-    int originalBlockCount = document()->blockCount();
     int blockNumber = block.blockNumber();
+    int originalBlockCount = document()->blockCount();
 
     QTextCursor cursor(block);
     cursor.movePosition(QTextCursor::StartOfBlock);
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     cursor.removeSelectedText();
-    
-    // Insert using a fragment to avoid creating new blocks accidentally
+
+    // Insert the rendered content
+    QString html;
+    if (isHorizontalRule) {
+        // For horizontal rules, use a table that Qt won't strip
+        html = "<table width='100%' cellspacing='0' cellpadding='0' style='border:none;'><tr>"
+               "<td style='border-top: 1px solid gray; height: 1px; margin: 8px 0;'></td>"
+               "</tr></table>";
+    } else {
+        html = renderMarkdownToHtml(raw);
+    }
+
     QTextDocument tempDoc;
     tempDoc.setHtml(html);
-    
-    // Apply current font to temp doc to match sizing
     QFont docFont = document()->defaultFont();
     tempDoc.setDefaultFont(docFont);
-    
+
     QTextCursor tempCursor(&tempDoc);
     tempCursor.select(QTextCursor::Document);
     QTextDocumentFragment fragment = tempCursor.selection();
-    
+
     cursor.insertFragment(fragment);
+
+    // Mark all blocks that contain this rendered content
+    // Qt may create extra blocks for block-level elements like tables
+    int blocksCreated = document()->blockCount() - originalBlockCount;
     
-    if (document()->blockCount() > originalBlockCount) {
-        // Qt created extra block(s) for block-level elements like lists. 
-        // The original block (now empty) is at blockNumber, and the rendered content is after it.
-        QTextCursor cleanupC(document()->findBlockByNumber(blockNumber));
-        cleanupC.deleteChar(); // This deletes the empty block and its userData
-        
-        // Re-attach data to the new block that shifted into this position
-        QTextBlock newBlock = document()->findBlockByNumber(blockNumber);
-        MarkdownBlockData* newData = new MarkdownBlockData();
-        newData->rawMarkdown = raw;
-        newData->isRendered = true;
-        const_cast<QTextBlock&>(newBlock).setUserData(newData);
-    } else {
-        data->isRendered = true;
+    // Mark the primary block
+    QTextBlock primaryBlock = document()->findBlockByNumber(blockNumber);
+    if (primaryBlock.isValid()) {
+        MarkdownBlockData* primaryData = static_cast<MarkdownBlockData*>(primaryBlock.userData());
+        if (!primaryData) {
+            primaryData = new MarkdownBlockData();
+            const_cast<QTextBlock&>(primaryBlock).setUserData(primaryData);
+        }
+        primaryData->rawMarkdown = raw;
+        primaryData->isRendered = true;
+    }
+    
+    // Mark any extra blocks created (for horizontal rules, etc.)
+    for (int i = 1; i <= blocksCreated && i < 3; ++i) {
+        QTextBlock extraBlock = document()->findBlockByNumber(blockNumber + i);
+        if (extraBlock.isValid()) {
+            MarkdownBlockData* extraData = static_cast<MarkdownBlockData*>(extraBlock.userData());
+            if (!extraData) {
+                extraData = new MarkdownBlockData();
+                const_cast<QTextBlock&>(extraBlock).setUserData(extraData);
+            }
+            extraData->rawMarkdown = raw;
+            extraData->isRendered = true;
+        }
+    }
+    
+    // Adjust activeBlockNumber if blocks were inserted before it
+    if (activeBlockNumber > blockNumber && blocksCreated > 0) {
+        activeBlockNumber += blocksCreated;
     }
 }
 
-void EditorWidget::revealBlock(QTextBlock block) {
-    if (!block.isValid()) return;
-    
-    MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
-    if (!data || !data->isRendered) return;
+int EditorWidget::revealBlock(QTextBlock block) {
+    if (!block.isValid()) return 0;
 
+    MarkdownBlockData* data = static_cast<MarkdownBlockData*>(block.userData());
+    if (!data || !data->isRendered) return 0;
+
+    QString rawMarkdown = data->rawMarkdown;
+    int blocksMerged = 0;
+    
+    // Find all consecutive blocks that are part of this rendered element
+    // (horizontal rules create extra blocks due to table HTML)
+    QVector<QTextBlock> renderedBlocks;
+    QTextBlock currentBlock = block;
+    
+    while (currentBlock.isValid()) {
+        MarkdownBlockData* currentData = static_cast<MarkdownBlockData*>(currentBlock.userData());
+        if (currentData && currentData->isRendered && currentData->rawMarkdown == rawMarkdown) {
+            renderedBlocks.append(currentBlock);
+            currentBlock = currentBlock.next();
+        } else {
+            break;
+        }
+    }
+    
+    // If there are multiple blocks, we need to merge them back into one
+    if (renderedBlocks.size() > 1) {
+        blocksMerged = renderedBlocks.size() - 1;
+        
+        // Start from the last block and work backwards
+        for (int i = renderedBlocks.size() - 1; i > 0; --i) {
+            QTextBlock blockToDelete = renderedBlocks[i];
+            if (blockToDelete.isValid()) {
+                QTextCursor cursor(blockToDelete);
+                cursor.movePosition(QTextCursor::StartOfBlock);
+                cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+                cursor.removeSelectedText();
+                
+                // Delete the empty block by merging with previous
+                if (cursor.atBlockEnd()) {
+                    cursor.deletePreviousChar();
+                }
+            }
+        }
+    }
+    
+    // Now restore the raw markdown in the main block
     QTextCursor cursor(block);
     cursor.movePosition(QTextCursor::StartOfBlock);
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-    
-    // Remove list formatting if the rendered block was a list
-    QTextBlockFormat clearFormat;
-    cursor.setBlockFormat(clearFormat);
+
+    // Remove any existing formatting
+    QTextBlockFormat clearBlockFormat;
+    cursor.setBlockFormat(clearBlockFormat);
     cursor.setCharFormat(QTextCharFormat());
-    QTextBlock currentB = cursor.block();
-    if (QTextList* list = currentB.textList()) {
-        list->remove(currentB);
+    
+    // Remove list formatting if present
+    if (QTextList* list = block.textList()) {
+        list->remove(block);
     }
 
-    cursor.insertText(data->rawMarkdown);
-    
+    cursor.insertText(rawMarkdown);
+
     data->isRendered = false;
+    
+    return blocksMerged;
 }
 
 void EditorWidget::renderAllBlocks() {

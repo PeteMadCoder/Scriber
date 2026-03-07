@@ -67,7 +67,7 @@ private:
     void applyTheme(); // Apply the current theme (palette, stylesheet)
 
     void renderBlock(QTextBlock block);
-    void revealBlock(QTextBlock block);
+    int revealBlock(QTextBlock block); // Returns number of blocks merged
     QString renderMarkdownToHtml(const QString& markdown);
 
     void insertMarkdownPair(const QString &opening, const QString &closing);
