@@ -75,7 +75,6 @@ private:
     QTextBlockFormat heading6BlockFormat;
     QTextBlockFormat codeBlockBlockFormat;
     QTextBlockFormat blockquoteBlockFormat;
-    QTextBlockFormat horizontalRuleBlockFormat;
     QTextBlockFormat tableBlockFormat;
 
     int currentBaseFontSize = 12;

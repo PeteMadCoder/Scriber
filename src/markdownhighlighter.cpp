@@ -195,8 +195,7 @@ void MarkdownHighlighter::updateFormatsForTheme()
     blockquoteBlockFormat.setLeftMargin(15);
     blockquoteBlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 
-    horizontalRuleBlockFormat.setBackground(QBrush(horizontalRuleColor));
-    horizontalRuleBlockFormat.setLineHeight(1, QTextBlockFormat::FixedHeight);
+
 
     tableBlockFormat.setLineHeight(100, QTextBlockFormat::ProportionalHeight);
 }
@@ -353,14 +352,6 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         currentBlock().setUserState(STATE_NORMAL);
         QTextCursor cursor(currentBlock());
         cursor.setBlockFormat(blockquoteBlockFormat);
-    } else if (text.trimmed().length() >= 3 &&
-               (text.trimmed().startsWith("---") ||
-                text.trimmed().startsWith("***") ||
-                text.trimmed().startsWith("___"))) {
-        currentBlock().setUserState(STATE_NORMAL);
-        QTextCursor cursor(currentBlock());
-        cursor.setBlockFormat(horizontalRuleBlockFormat);
-        setFormat(0, text.length(), QTextCharFormat());
     }
 
     // Apply character-level formatting

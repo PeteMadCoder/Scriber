@@ -37,7 +37,7 @@
 - [ ] **Advanced Table Support**:
     - Render actual rich-text tables when a block containing Markdown tables is inactive.
     - Handle transitions between a rendered table and the raw text representation gracefully.
-- [ ] **True Horizontal Rules**: Render actual visual lines instead of styled `---` text.
+- [x] **True Horizontal Rules**: Render actual visual lines instead of styled `---` text.
 
 ### UI/UX Enhancements
 - [ ] **Find & Replace**: Add replace functionality to `FindBarWidget`.
