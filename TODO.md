@@ -48,8 +48,8 @@
 - [ ] **Customizable Themes**: Allow users to create/edit custom themes and import/export JSON.
 
 ### Theme System Improvements
-- [ ] **Secondary Color Support**: Add secondary/accent color field to theme definitions.
-- [ ] **Theme Completeness**: Ensure all UI elements use theme colors (no hardcoded values).
+- [x] **Secondary Color Support**: Add secondary/accent color field to theme definitions.
+- [x] **Theme Completeness**: Ensure all UI elements use theme colors (no hardcoded values).
 
 ### Code Quality & Maintainability
 - [ ] **Add Unit Tests**: Set up Qt Test framework.

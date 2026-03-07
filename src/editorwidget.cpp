@@ -14,6 +14,7 @@
 #include <QAction> 
 #include <QScrollBar>
 #include <QTextDocumentFragment>
+#include <QTextList>
 #include <cmark.h>
 
 
@@ -165,8 +166,12 @@ void EditorWidget::renderBlock(QTextBlock block) {
     if (data->isRendered) return;
 
     data->rawMarkdown = block.text();
-    QString html = renderMarkdownToHtml(data->rawMarkdown);
+    QString raw = data->rawMarkdown; // Keep a copy in case block is deleted
+    QString html = renderMarkdownToHtml(raw);
     
+    int originalBlockCount = document()->blockCount();
+    int blockNumber = block.blockNumber();
+
     QTextCursor cursor(block);
     cursor.movePosition(QTextCursor::StartOfBlock);
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
@@ -186,7 +191,21 @@ void EditorWidget::renderBlock(QTextBlock block) {
     
     cursor.insertFragment(fragment);
     
-    data->isRendered = true;
+    if (document()->blockCount() > originalBlockCount) {
+        // Qt created extra block(s) for block-level elements like lists. 
+        // The original block (now empty) is at blockNumber, and the rendered content is after it.
+        QTextCursor cleanupC(document()->findBlockByNumber(blockNumber));
+        cleanupC.deleteChar(); // This deletes the empty block and its userData
+        
+        // Re-attach data to the new block that shifted into this position
+        QTextBlock newBlock = document()->findBlockByNumber(blockNumber);
+        MarkdownBlockData* newData = new MarkdownBlockData();
+        newData->rawMarkdown = raw;
+        newData->isRendered = true;
+        const_cast<QTextBlock&>(newBlock).setUserData(newData);
+    } else {
+        data->isRendered = true;
+    }
 }
 
 void EditorWidget::revealBlock(QTextBlock block) {
@@ -198,6 +217,15 @@ void EditorWidget::revealBlock(QTextBlock block) {
     QTextCursor cursor(block);
     cursor.movePosition(QTextCursor::StartOfBlock);
     cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    
+    // Remove list formatting if the rendered block was a list
+    cursor.setBlockFormat(QTextBlockFormat());
+    cursor.setCharFormat(QTextCharFormat());
+    QTextBlock currentB = cursor.block();
+    if (QTextList* list = currentB.textList()) {
+        list->remove(currentB);
+    }
+
     cursor.insertText(data->rawMarkdown);
     
     data->isRendered = false;
