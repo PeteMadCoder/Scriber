@@ -16,7 +16,7 @@
 
 
 EditorWidget::EditorWidget(QWidget *parent)
-    : QPlainTextEdit(parent), currentTheme(Theme::Dark), currentZoom(0)
+    : QTextEdit(parent), currentTheme(Theme::Dark), currentZoom(0)
 {
     QFont font;
     font.setFamily("Segoe UI, Arial, sans-serif");
@@ -82,7 +82,7 @@ EditorWidget::EditorWidget(QWidget *parent)
     connect(spellCheckTimer, &QTimer::timeout, this, &EditorWidget::checkSpelling);
 
     // Connect to text changes to trigger delayed spell checking
-    connect(this, &QPlainTextEdit::textChanged, [this]() {
+    connect(this, &QTextEdit::textChanged, [this]() {
         if (spellCheckEnabled && spellChecker && spellChecker->isInitialized()) {
             spellCheckTimer->start();
         }
@@ -179,7 +179,7 @@ void EditorWidget::keyPressEvent(QKeyEvent *event) {
     }
     
     // If we get here, the event wasn't handled by our custom logic
-    QPlainTextEdit::keyPressEvent(event);
+    QTextEdit::keyPressEvent(event);
 }
 
 bool EditorWidget::handleBackspace() {
@@ -263,7 +263,7 @@ void EditorWidget::insertMarkdownPair(const QString &opening, const QString &clo
 
 void EditorWidget::focusInEvent(QFocusEvent *event) {
     // Call the base class implementation first
-    QPlainTextEdit::focusInEvent(event);
+    QTextEdit::focusInEvent(event);
 }
 
 void EditorWidget::contextMenuEvent(QContextMenuEvent *event) {
@@ -467,7 +467,7 @@ void EditorWidget::wheelEvent(QWheelEvent *e) {
     }
     
     // Pass other wheel events to base class
-    QPlainTextEdit::wheelEvent(e);
+    QTextEdit::wheelEvent(e);
 }
 
 void EditorWidget::setSpellCheckEnabled(bool enabled)

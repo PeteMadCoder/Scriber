@@ -13,7 +13,7 @@
 #include <QDockWidget>
 #include <QTreeView>
 #include <QTextEdit>
-#include <QPlainTextEdit>
+#include <QTextEdit>
 #include <QLineEdit>
 #include <QScrollBar>
 #include <QStandardPaths>

@@ -1,5 +1,5 @@
 #pragma once
-#include <QPlainTextEdit>
+#include <QTextEdit>
 #include <QScopedPointer>
 #include <QKeyEvent>
 #include <QFocusEvent>
@@ -12,7 +12,7 @@
 class MarkdownHighlighter; // Forward declaration
 class SpellChecker;
 
-class EditorWidget : public QPlainTextEdit
+class EditorWidget : public QTextEdit
 {
     Q_OBJECT
 

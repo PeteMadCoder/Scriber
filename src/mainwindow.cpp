@@ -226,7 +226,7 @@ void MainWindow::setupEditorConnections(EditorWidget *editor)
     connect(editor->document(), &QTextDocument::modificationChanged,
             this, &MainWindow::documentWasModified);
 
-    connect(editor, &QPlainTextEdit::textChanged, [this]() {
+    connect(editor, &QTextEdit::textChanged, [this]() {
         outlineTimer->start();
         wordCountTimer->start();
     });

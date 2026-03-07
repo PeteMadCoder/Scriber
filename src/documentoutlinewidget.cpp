@@ -127,7 +127,7 @@ void DocumentOutlineWidget::onItemClicked(QTreeWidgetItem *item, int column)
         cursor.movePosition(QTextCursor::Start);
         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, line - 1);
         currentEditor->setTextCursor(cursor);
-        currentEditor->centerCursor();
+        currentEditor->ensureCursorVisible();
         currentEditor->setFocus();
     }
 }
