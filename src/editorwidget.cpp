@@ -168,7 +168,9 @@ void EditorWidget::renderBlock(QTextBlock block) {
     QString html = renderMarkdownToHtml(data->rawMarkdown);
     
     QTextCursor cursor(block);
-    cursor.select(QTextCursor::BlockUnderCursor);
+    cursor.movePosition(QTextCursor::StartOfBlock);
+    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    cursor.removeSelectedText();
     
     // Insert using a fragment to avoid creating new blocks accidentally
     QTextDocument tempDoc;
@@ -194,7 +196,8 @@ void EditorWidget::revealBlock(QTextBlock block) {
     if (!data || !data->isRendered) return;
 
     QTextCursor cursor(block);
-    cursor.select(QTextCursor::BlockUnderCursor);
+    cursor.movePosition(QTextCursor::StartOfBlock);
+    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     cursor.insertText(data->rawMarkdown);
     
     data->isRendered = false;
